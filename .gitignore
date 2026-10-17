@@ -1,0 +1,30 @@
+# Node
+node_modules/
+.next/
+out/
+build/
+dist/
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Admin credentials file (Must NEVER be committed to Git!)
+admin_credentials.txt
+
+# Database files
+prisma/*.db
+prisma/*.db-journal
+*.db
+*.db-journal
+
+# Uploads
+uploads/*
+!uploads/.gitkeep
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*

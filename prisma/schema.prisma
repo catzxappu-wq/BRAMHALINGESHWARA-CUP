@@ -1,0 +1,131 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Player {
+  id                 String    @id @default(cuid())
+  registrationCode   String?   @unique
+  fullName           String
+  mobileNumber       String
+  address            String
+  playerCategory     String    // "batsman", "bowler", "all_rounder"
+  photoStorageKey    String
+  paymentStatus      String    @default("pending") // "pending", "paid", "failed", "cancelled"
+  selectionStatus    String    @default("pending") // "pending", "approved", "not_selected"
+  registrationStatus String    @default("pending_payment") // "pending_payment", "completed", "cancelled"
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  payments           Payment[]
+
+  @@index([mobileNumber])
+  @@index([registrationCode])
+  @@index([paymentStatus])
+  @@index([selectionStatus])
+}
+
+model Payment {
+  id                       String   @id @default(cuid())
+  playerId                 String
+  player                   Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  gatewayName              String   @default("razorpay")
+  gatewayOrderId           String?  @unique
+  gatewayPaymentId         String?  @unique
+  amount                   Float
+  currency                 String   @default("INR")
+  paymentStatus            String   @default("created") // "created", "pending", "captured", "failed", "cancelled"
+  paymentSignatureVerified Boolean  @default(false)
+  rawGatewayResponse       String?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  @@index([playerId])
+  @@index([gatewayOrderId])
+}
+
+model Admin {
+  id                  String            @id @default(cuid())
+  username            String            @unique
+  passwordHash        String
+  role                String            @default("normal") // "supervisor" | "normal"
+  isActive            Boolean           @default(true)
+  mustChangePassword  Boolean           @default(true)
+  failedLoginAttempts Int               @default(0)
+  lockedUntil         DateTime?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  permissions         AdminPermission[]
+
+  @@index([username])
+}
+
+model AdminPermission {
+  id            String   @id @default(cuid())
+  adminId       String
+  admin         Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  permissionKey String
+  grantedBy     String
+  createdAt     DateTime @default(now())
+
+  @@unique([adminId, permissionKey])
+}
+
+model TournamentSetting {
+  id                    Int       @id @default(1)
+  tournamentName        String    @default("ಶ್ರೀ ಬ್ರಹ್ಮಲಿಂಗೇಶ್ವರ ಕಪ್")
+  tournamentEdition     String    @default("ಕ್ರಿಕೆಟ್ ಪಂದ್ಯಾವಳಿ 2026")
+  season                String    @default("ಸೀಸನ್ - 01")
+  registrationFee       Float     @default(200.0)
+  registrationOpen      Boolean   @default(true)
+  registrationCapacity  Int       @default(150)
+  capacityCountingRule  String    @default("paid") // "paid" | "completed"
+  registrationDeadline  DateTime?
+  tournamentDates       String    @default("20, 21 ಮತ್ತು 22 ನವೆಂಬರ್ 2026")
+  tournamentVenue       String    @default("ಗೆಣಸಿನಕುಣಿ")
+  firstPrize            String    @default("₹28,888/- ಹಾಗೂ ಪಾರಿತೋಷಕ")
+  secondPrize           String    @default("₹18,888/- ಹಾಗೂ ಪಾರಿತೋಷಕ")
+  contactNumber1        String    @default("9632520611")
+  contactName1          String    @default("ತೀರ್ಥೇಶ್‌")
+  contactNumber2        String    @default("9606467726")
+  contactName2          String    @default("ಪ್ರಜ್ವಲ್ PK")
+  rules                 String    @default("")
+  updatedBy             String?
+  updatedAt             DateTime  @updatedAt
+}
+
+model AdminActivityLog {
+  id            String   @id @default(cuid())
+  adminId       String?
+  adminUsername String?
+  action        String
+  targetType    String
+  targetId      String?
+  safeMetadata  String?
+  timestamp     DateTime @default(now())
+
+  @@index([timestamp])
+  @@index([adminId])
+}
+
+model WebhookEvent {
+  id               String    @id @default(cuid())
+  gatewayEventId   String?   @unique
+  eventType        String
+  processingStatus String    @default("pending") // "pending", "processed", "failed", "ignored"
+  payload          String?
+  receivedAt       DateTime  @default(now())
+  processedAt      DateTime?
+
+  @@index([gatewayEventId])
+}
+
+model CodeSequence {
+  id         String @id @default("player_code")
+  lastNumber Int    @default(0)
+}
