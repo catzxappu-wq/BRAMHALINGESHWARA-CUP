@@ -13,6 +13,7 @@ import {
   ArrowRight,
   Eye,
   EyeOff,
+  Database,
 } from 'lucide-react';
 
 export default function AdminLoginPage() {
@@ -23,10 +24,12 @@ export default function AdminLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [errorDetail, setErrorDetail] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
+    setErrorDetail('');
     setLoading(true);
 
     try {
@@ -43,6 +46,9 @@ export default function AdminLoginPage() {
 
       if (!res.ok || !data.success) {
         setErrorMessage(data.message || 'ಲಾಗಿನ್ ವಿಫಲವಾಗಿದೆ.');
+        if (data.errorDetail) {
+          setErrorDetail(data.errorDetail);
+        }
         setLoading(false);
         return;
       }
@@ -80,9 +86,16 @@ export default function AdminLoginPage() {
           <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#b91c1c] via-[#fbbf24] to-[#15803d]" />
 
           {errorMessage && (
-            <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/50 flex items-start gap-3 text-red-300 text-sm">
-              <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
-              <span>{errorMessage}</span>
+            <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/50 text-red-300 text-sm space-y-2">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                <span>{errorMessage}</span>
+              </div>
+              {errorDetail && (
+                <div className="text-xs bg-black/40 p-2 rounded text-red-400 font-mono break-all border border-red-500/20">
+                  {errorDetail}
+                </div>
+              )}
             </div>
           )}
 

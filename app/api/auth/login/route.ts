@@ -3,6 +3,8 @@ import prisma from '@/lib/prisma';
 import { comparePassword, signToken, logAdminActivity } from '@/lib/auth';
 import { checkRateLimit } from '@/lib/rateLimit';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   try {
     const ip = req.headers.get('x-forwarded-for') || 'local';
@@ -29,10 +31,24 @@ export async function POST(req: NextRequest) {
     }
 
     const cleanUsername = String(username).trim();
-    const admin = await prisma.admin.findUnique({
-      where: { username: cleanUsername },
-      include: { permissions: true },
-    });
+
+    let admin;
+    try {
+      admin = await prisma.admin.findUnique({
+        where: { username: cleanUsername },
+        include: { permissions: true },
+      });
+    } catch (dbError: any) {
+      console.error('Database query error during login:', dbError);
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'ಡೇಟಾಬೇಸ್ ಸಂಪರ್ಕ ಅಥವಾ ಕೋಷ್ಟಕ ಕಂಡುಬಂದಿಲ್ಲ. ದಯವಿಟ್ಟು ಕ್ಲೌಡ್ ಡೇಟಾಬೇಸ್ ಕಾನ್ಫಿಗರ್ ಮಾಡಿ ಅಥವಾ /api/admin/init-db ಚಲಾಯಿಸಿ.',
+          errorDetail: dbError?.message || String(dbError),
+        },
+        { status: 500 }
+      );
+    }
 
     if (!admin) {
       return NextResponse.json(
@@ -71,19 +87,23 @@ export async function POST(req: NextRequest) {
         updateData.lockedUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 min lock
       }
 
-      await prisma.admin.update({
-        where: { id: admin.id },
-        data: updateData,
-      });
+      try {
+        await prisma.admin.update({
+          where: { id: admin.id },
+          data: updateData,
+        });
 
-      await logAdminActivity(
-        admin.id,
-        admin.username,
-        'LOGIN_FAILED',
-        'ADMIN',
-        admin.id,
-        { ip, attempt: newAttempts }
-      );
+        await logAdminActivity(
+          admin.id,
+          admin.username,
+          'LOGIN_FAILED',
+          'ADMIN',
+          admin.id,
+          { ip, attempt: newAttempts }
+        );
+      } catch (e) {
+        console.error('Failed to update attempts:', e);
+      }
 
       return NextResponse.json(
         {
@@ -98,13 +118,17 @@ export async function POST(req: NextRequest) {
     }
 
     // Successful login: Reset failed attempts & lockout
-    await prisma.admin.update({
-      where: { id: admin.id },
-      data: {
-        failedLoginAttempts: 0,
-        lockedUntil: null,
-      },
-    });
+    try {
+      await prisma.admin.update({
+        where: { id: admin.id },
+        data: {
+          failedLoginAttempts: 0,
+          lockedUntil: null,
+        },
+      });
+    } catch (e) {
+      console.error('Failed to reset attempts:', e);
+    }
 
     const token = signToken({
       id: admin.id,
@@ -131,7 +155,6 @@ export async function POST(req: NextRequest) {
       message: 'ಲಾಗಿನ್ ಯಶಸ್ವಿಯಾಗಿದೆ.',
     });
 
-    // Set secure cookie
     response.cookies.set({
       name: 'admin_session',
       value: token,
@@ -139,14 +162,18 @@ export async function POST(req: NextRequest) {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
-      maxAge: 8 * 60 * 60, // 8 hours
+      maxAge: 8 * 60 * 60,
     });
 
     return response;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Admin login error:', error);
     return NextResponse.json(
-      { success: false, message: 'ಲಾಗಿನ್ ಪ್ರಕ್ರಿಯೆಯಲ್ಲಿ ಸರ್ವರ್ ದೋಷ ಸಂಭವಿಸಿದೆ.' },
+      {
+        success: false,
+        message: 'ಲಾಗಿನ್ ಪ್ರಕ್ರಿಯೆಯಲ್ಲಿ ಸರ್ವರ್ ದೋಷ ಸಂಭವಿಸಿದೆ.',
+        errorDetail: error?.message || String(error),
+      },
       { status: 500 }
     );
   }

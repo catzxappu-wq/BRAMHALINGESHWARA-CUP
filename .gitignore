@@ -15,8 +15,10 @@ admin_credentials.txt
 
 # Database files
 prisma/*.db
+!prisma/seed.db
 prisma/*.db-journal
 *.db
+!prisma/seed.db
 *.db-journal
 
 # Uploads
