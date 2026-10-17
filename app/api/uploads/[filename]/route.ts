@@ -11,10 +11,21 @@ export async function GET(
 
     // Prevent path traversal
     const safeFilename = path.basename(filename);
-    const uploadDir = path.join(process.cwd(), process.env.UPLOAD_DIR || 'uploads');
-    const filePath = path.join(uploadDir, safeFilename);
+    const candidateDirs = [
+      path.join(process.cwd(), process.env.UPLOAD_DIR || 'uploads'),
+      '/tmp/uploads',
+    ];
 
-    if (!fs.existsSync(filePath)) {
+    let filePath = '';
+    for (const dir of candidateDirs) {
+      const candidate = path.join(dir, safeFilename);
+      if (fs.existsSync(candidate)) {
+        filePath = candidate;
+        break;
+      }
+    }
+
+    if (!filePath || !fs.existsSync(filePath)) {
       return new NextResponse('File not found', { status: 404 });
     }
 

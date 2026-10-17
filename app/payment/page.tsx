@@ -38,19 +38,24 @@ function PaymentContent() {
       return;
     }
 
-    fetch(`/api/admin/players?search=${playerId}`)
+    fetch(`/api/player-details?playerId=${playerId}`)
       .then((res) => res.json())
       .then((data) => {
-        if (data.success && data.players && data.players.length > 0) {
-          const found = data.players.find((p: any) => p.id === playerId) || data.players[0];
+        if (data.success && data.player) {
+          const found = data.player;
           setPlayer(found);
 
           if (found.paymentStatus === 'paid' && found.registrationCode) {
             router.push(`/success?code=${found.registrationCode}&name=${encodeURIComponent(found.fullName)}`);
           }
+        } else {
+          setErrorMessage(data.message || 'ಆಟಗಾರರ ಮಾಹಿತಿ ಲಭ್ಯವಾಗಿಲ್ಲ.');
         }
       })
-      .catch((err) => console.error(err))
+      .catch((err) => {
+        console.error(err);
+        setErrorMessage('ಮಾಹಿತಿ ಪಡೆಯುವಲ್ಲಿ ದೋಷ ಸಂಭವಿಸಿದೆ.');
+      })
       .finally(() => setLoading(false));
   }, [playerId, router]);
 
@@ -60,19 +65,18 @@ function PaymentContent() {
     setErrorMessage('');
 
     try {
-      const res = await fetch('/api/register', {
+      const res = await fetch('/api/payment/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fullName: player.fullName,
-          mobileNumber: player.mobileNumber,
-          address: player.address,
-          playerCategory: player.playerCategory,
-          photoStorageKey: player.photoStorageKey,
-        }),
+        body: JSON.stringify({ playerId: player.id }),
       });
 
       const data = await res.json();
+
+      if (data.alreadyPaid && data.registrationCode) {
+        router.push(`/success?code=${data.registrationCode}&name=${encodeURIComponent(player.fullName)}`);
+        return;
+      }
 
       if (!data.isPaymentGatewayConfigured) {
         setGatewayNotConfigured(true);
@@ -227,11 +231,10 @@ function PaymentContent() {
               </div>
               {player.photoUrl && (
                 <div className="w-16 h-16 rounded-xl overflow-hidden border-2 border-[#fbbf24] shadow-md relative">
-                  <Image
+                  <img
                     src={player.photoUrl}
                     alt={player.fullName}
-                    fill
-                    className="object-cover"
+                    className="w-full h-full object-cover"
                   />
                 </div>
               )}

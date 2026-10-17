@@ -62,6 +62,43 @@ export default function RegisterPage() {
       .finally(() => setLoadingSettings(false));
   }, []);
 
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (readerEvent) => {
+        const img = document.createElement('img');
+        img.onload = () => {
+          const maxDim = 800;
+          let width = img.width;
+          let height = img.height;
+          if (width > height) {
+            if (width > maxDim) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            }
+          } else {
+            if (height > maxDim) {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+          resolve(dataUrl);
+        };
+        img.onerror = () => {
+          resolve((readerEvent.target?.result as string) || '');
+        };
+        img.src = (readerEvent.target?.result as string) || '';
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -81,26 +118,29 @@ export default function RegisterPage() {
 
     setErrorMessage('');
     setPhotoFile(file);
-    setPhotoPreview(URL.createObjectURL(file));
 
-    // Upload to server immediately
-    const formData = new FormData();
-    formData.append('photo', file);
-
+    // Compress client-side and set preview & photoStorageKey immediately
     setUploadingPhoto(true);
     try {
+      const compressedUrl = await compressImage(file);
+      setPhotoPreview(compressedUrl);
+      setPhotoStorageKey(compressedUrl); // Valid immediately, so user is never blocked!
+
+      // Also attempt server upload in background if available
+      const formData = new FormData();
+      formData.append('photo', file);
       const res = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       });
-      const data = await res.json();
-      if (data.success) {
-        setPhotoStorageKey(data.photoStorageKey);
-      } else {
-        setErrorMessage(data.message || 'ಭಾವಚಿತ್ರ ಅಪ್ಲೋಡ್ ವಿಫಲವಾಗಿದೆ.');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.photoStorageKey) {
+          setPhotoStorageKey(data.photoStorageKey);
+        }
       }
     } catch (err) {
-      setErrorMessage('ಭಾವಚಿತ್ರ ಅಪ್ಲೋಡ್ ಮಾಡುವಲ್ಲಿ ದೋಷ ಸಂಭವಿಸಿದೆ.');
+      console.warn('Background upload note:', err);
     } finally {
       setUploadingPhoto(false);
     }
@@ -112,23 +152,27 @@ export default function RegisterPage() {
 
     if (!canRegister) {
       setErrorMessage(closureReason || 'ಪ್ರಸ್ತುತ ನೋಂದಣಿ ಮುಕ್ತಾಯಗೊಂಡಿದೆ.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
     // Validations
     if (!fullName.trim() || fullName.trim().length < 2) {
       setErrorMessage('ದಯವಿಟ್ಟು ನಿಮ್ಮ ಪೂರ್ಣ ಹೆಸರನ್ನು ನಮೂದಿಸಿ (ಕನಿಷ್ಠ 2 ಅಕ್ಷರಗಳು).');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
     const cleanMobile = mobileNumber.trim().replace(/\D/g, '');
     if (!/^[6-9]\d{9}$/.test(cleanMobile)) {
       setErrorMessage('ದಯವಿಟ್ಟು ಸರಿಯಾದ 10 ಅಂಕಿಗಳ ಭಾರತೀಯ ಮೊಬೈಲ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ (ಉದಾ: 9876543210).');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
     if (!address.trim() || address.trim().length < 5) {
       setErrorMessage('ದಯವಿಟ್ಟು ಪೂರ್ಣ ವಿಳಾಸವನ್ನು ನಮೂದಿಸಿ (ಕನಿಷ್ಠ 5 ಅಕ್ಷರಗಳು).');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
@@ -403,6 +447,17 @@ export default function RegisterPage() {
                 </span>
               </div>
             </div>
+
+            {/* Inline Error Banner above Submit */}
+            {errorMessage && (
+              <div className="p-4 rounded-xl bg-red-950/90 border-2 border-red-500 flex items-start gap-3 text-red-200 text-sm shadow-lg">
+                <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                <div>
+                  <div className="font-bold text-red-300 mb-0.5">ಸೂಚನೆ (ದಯವಿಟ್ಟು ಪರಿಶೀಲಿಸಿ):</div>
+                  <div className="text-white font-medium">{errorMessage}</div>
+                </div>
+              </div>
+            )}
 
             {/* Submit Button */}
             <button

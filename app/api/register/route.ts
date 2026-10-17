@@ -49,14 +49,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Verify uploaded photo exists
-    const uploadDir = path.join(process.cwd(), process.env.UPLOAD_DIR || 'uploads');
-    const safeFilename = path.basename(photoStorageKey);
-    if (!fs.existsSync(path.join(uploadDir, safeFilename))) {
-      return NextResponse.json(
-        { success: false, message: 'ಅಪ್ಲೋಡ್ ಮಾಡಿದ ಭಾವಚಿತ್ರವು ಸರ್ವರ್‌ನಲ್ಲಿ ಕಂಡುಬಂದಿಲ್ಲ. ದಯವಿಟ್ಟು ಪುನಃ ಅಪ್ಲೋಡ್ ಮಾಡಿ.' },
-        { status: 400 }
-      );
+    // Verify uploaded photo
+    let safePhotoKey = photoStorageKey;
+    if (typeof photoStorageKey === 'string' && photoStorageKey.startsWith('data:')) {
+      safePhotoKey = photoStorageKey;
+    } else {
+      const safeFilename = path.basename(photoStorageKey);
+      safePhotoKey = safeFilename;
+      const uploadDirs = [
+        path.join(process.cwd(), process.env.UPLOAD_DIR || 'uploads'),
+        '/tmp/uploads',
+      ];
+      const exists = uploadDirs.some((dir) => fs.existsSync(path.join(dir, safeFilename)));
+      if (!exists && !process.env.VERCEL && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
+        return NextResponse.json(
+          { success: false, message: 'ಅಪ್ಲೋಡ್ ಮಾಡಿದ ಭಾವಚಿತ್ರವು ಸರ್ವರ್‌ನಲ್ಲಿ ಕಂಡುಬಂದಿಲ್ಲ. ದಯವಿಟ್ಟು ಪುನಃ ಅಪ್ಲೋಡ್ ಮಾಡಿ.' },
+          { status: 400 }
+        );
+      }
     }
 
     // 2. Atomic Capacity Check
@@ -97,7 +107,7 @@ export async function POST(req: NextRequest) {
         mobileNumber: cleanMobile,
         address: address.trim(),
         playerCategory,
-        photoStorageKey: safeFilename,
+        photoStorageKey: safePhotoKey,
         paymentStatus: 'pending',
         selectionStatus: 'pending',
         registrationStatus: 'pending_payment',
