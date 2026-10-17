@@ -6,11 +6,6 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
-    // Check if supervisor already exists
-    let supervisor = await prisma.admin.findUnique({
-      where: { username: 'supervisor' },
-    });
-
     const results: string[] = [];
 
     // 1. Initialize Tournament Settings
@@ -65,20 +60,43 @@ export async function GET(req: NextRequest) {
     results.push('Code sequence initialized.');
 
     // 3. Supervisor Account
+    const supUsername = 'catzxappu';
+    const supPassword = 'shree@3101';
+    let supervisor = await prisma.admin.findFirst({
+      where: {
+        OR: [
+          { username: supUsername },
+          { role: 'supervisor' },
+        ],
+      },
+    });
+
+    const supHash = await bcrypt.hash(supPassword, 10);
     if (!supervisor) {
-      const supHash = await bcrypt.hash('SbkSup2026@b0d72a', 10);
       supervisor = await prisma.admin.create({
         data: {
-          username: 'supervisor',
+          username: supUsername,
           passwordHash: supHash,
           role: 'supervisor',
           isActive: true,
-          mustChangePassword: true,
+          mustChangePassword: false,
         },
       });
-      results.push('Supervisor account created (username: supervisor, password: SbkSup2026@b0d72a).');
+      results.push(`Supervisor account created (username: ${supUsername}, password: ${supPassword}).`);
     } else {
-      results.push('Supervisor account already exists.');
+      supervisor = await prisma.admin.update({
+        where: { id: supervisor.id },
+        data: {
+          username: supUsername,
+          passwordHash: supHash,
+          role: 'supervisor',
+          isActive: true,
+          mustChangePassword: false,
+          failedLoginAttempts: 0,
+          lockedUntil: null,
+        },
+      });
+      results.push(`Supervisor account updated to ${supUsername} (password: ${supPassword}).`);
     }
 
     // 4. Normal Admin Account
@@ -130,4 +148,8 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+export async function POST(req: NextRequest) {
+  return GET(req);
 }

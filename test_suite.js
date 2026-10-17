@@ -36,10 +36,10 @@ async function runTests() {
     // TEST 2: Supervisor & Normal Admin accounts
     console.log('\n--- Test Group 2: Admin Accounts & Password Hashing ---');
     const supervisor = await prisma.admin.findUnique({
-      where: { username: 'supervisor' },
+      where: { username: 'catzxappu' },
       include: { permissions: true },
     });
-    assert(supervisor !== null, 'Supervisor admin account exists');
+    assert(supervisor !== null, 'Supervisor admin account (catzxappu) exists');
     assert(supervisor.role === 'supervisor', 'Supervisor has role=supervisor');
     assert(supervisor.isActive === true, 'Supervisor account is active');
 
@@ -53,11 +53,11 @@ async function runTests() {
 
     // TEST 3: Password verification
     const credFile = fs.readFileSync(path.join(__dirname, 'admin_credentials.txt'), 'utf8');
-    assert(credFile.includes('supervisor'), 'admin_credentials.txt contains supervisor username');
+    assert(credFile.includes('catzxappu'), 'admin_credentials.txt contains supervisor username catzxappu');
     assert(credFile.includes('admin_staff'), 'admin_credentials.txt contains normal admin username');
 
     // Extract supervisor password from file
-    const supMatch = credFile.match(/Username : supervisor\r?\nPassword : (.+)/);
+    const supMatch = credFile.match(/Username : catzxappu\r?\nPassword : (.+)/);
     if (supMatch && supMatch[1] && !supMatch[1].includes('[')) {
       const match = await bcrypt.compare(supMatch[1].trim(), supervisor.passwordHash);
       assert(match === true, 'Supervisor password in admin_credentials.txt hashes properly and matches DB');

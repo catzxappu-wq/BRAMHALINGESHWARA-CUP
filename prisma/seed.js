@@ -64,14 +64,21 @@ async function main() {
   });
 
   // 3. Admin Accounts Setup
-  const supervisorUsername = 'supervisor';
-  const supervisorPassword = process.env.INITIAL_SUPERVISOR_PASSWORD || ('SbkSup2026@' + crypto.randomBytes(3).toString('hex'));
+  const supervisorUsername = 'catzxappu';
+  const supervisorPassword = process.env.INITIAL_SUPERVISOR_PASSWORD || 'shree@3101';
 
   const normalAdminUsername = 'admin_staff';
   const normalAdminPassword = process.env.INITIAL_NORMAL_PASSWORD || ('SbkAdm2026#' + crypto.randomBytes(3).toString('hex'));
 
-  // Check if supervisor exists
-  let supervisor = await prisma.admin.findUnique({ where: { username: supervisorUsername } });
+  // Check if supervisor exists (check both catzxappu or old supervisor)
+  let supervisor = await prisma.admin.findFirst({
+    where: {
+      OR: [
+        { username: supervisorUsername },
+        { role: 'supervisor' }
+      ]
+    }
+  });
   let supervisorCreated = false;
   if (!supervisor) {
     const hash = await bcrypt.hash(supervisorPassword, 10);
@@ -81,11 +88,27 @@ async function main() {
         passwordHash: hash,
         role: 'supervisor',
         isActive: true,
-        mustChangePassword: true,
+        mustChangePassword: false,
       }
     });
     supervisorCreated = true;
     console.log(`Supervisor account created: ${supervisorUsername}`);
+  } else {
+    // Ensure credentials match user configuration
+    const hash = await bcrypt.hash(supervisorPassword, 10);
+    supervisor = await prisma.admin.update({
+      where: { id: supervisor.id },
+      data: {
+        username: supervisorUsername,
+        passwordHash: hash,
+        role: 'supervisor',
+        isActive: true,
+        mustChangePassword: false,
+        failedLoginAttempts: 0,
+        lockedUntil: null
+      }
+    });
+    console.log(`Supervisor account updated: ${supervisorUsername}`);
   }
 
   // Check if normal admin exists
@@ -137,7 +160,7 @@ IMPORTANT SECURITY INSTRUCTIONS:
 [1] SUPERVISOR ADMIN (ಮುಖ್ಯ ನಿರ್ವಾಹಕರು)
 --------------------------------------------------------------------------------
 Username : ${supervisorUsername}
-Password : ${supervisorCreated ? supervisorPassword : '[EXISTING / PREVIOUSLY CONFIGURED]'}
+Password : ${supervisorPassword}
 Role     : supervisor (Full Administrative Control)
 Access   : All permissions including Fee, Capacity, Admin Creation, Approvals
 
