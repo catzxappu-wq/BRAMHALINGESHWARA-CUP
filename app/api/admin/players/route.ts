@@ -72,8 +72,15 @@ export async function GET(req: NextRequest) {
         mobileNumber: p.mobileNumber,
         address: p.address,
         playerCategory: p.playerCategory,
-        photoUrl: `/api/uploads/${p.photoStorageKey}`,
+        guidanceBy: p.guidanceBy || '-',
+        photoUrl: p.photoStorageKey.startsWith('data:') ? p.photoStorageKey : `/api/uploads/${p.photoStorageKey}`,
         photoStorageKey: p.photoStorageKey,
+        paymentReceiptUrl: p.paymentReceiptStorageKey
+          ? (p.paymentReceiptStorageKey.startsWith('data:')
+              ? p.paymentReceiptStorageKey
+              : `/api/uploads/${p.paymentReceiptStorageKey}`)
+          : null,
+        transactionReference: p.transactionReference || '-',
         paymentStatus: p.paymentStatus,
         selectionStatus: p.selectionStatus,
         registrationStatus: p.registrationStatus,
@@ -97,41 +104,54 @@ export async function PATCH(req: NextRequest) {
     const permitted = await hasPermission(session, 'update_selection');
     if (!permitted) {
       return NextResponse.json(
-        { success: false, message: 'ಆಯ್ಕೆ ಸ್ಥಿತಿಯನ್ನು ನವೀಕರಿಸಲು ನಿಮಗೆ ಅನುಮತಿ ಇಲ್ಲ.' },
+        { success: false, message: 'ಆಯ್ಕೆ ಅಥವಾ ಪಾವತಿ ಸ್ಥಿತಿಯನ್ನು ನವೀಕರಿಸಲು ನಿಮಗೆ ಅನುಮತಿ ಇಲ್ಲ.' },
         { status: 403 }
       );
     }
 
     const body = await req.json();
-    const { playerId, selectionStatus } = body;
+    const { playerId, selectionStatus, paymentStatus } = body;
 
-    if (!playerId || !selectionStatus) {
+    if (!playerId || (!selectionStatus && !paymentStatus)) {
       return NextResponse.json({ success: false, message: 'ಅಗತ್ಯವಿರುವ ಮಾಹಿತಿ ಅಪೂರ್ಣವಾಗಿದೆ.' }, { status: 400 });
     }
 
-    const validSelection = ['pending', 'approved', 'not_selected'];
-    if (!validSelection.includes(selectionStatus)) {
-      return NextResponse.json({ success: false, message: 'ಅಮಾನ್ಯ ಆಯ್ಕೆ ಸ್ಥಿತಿ.' }, { status: 400 });
+    const updateData: any = {};
+
+    if (selectionStatus) {
+      const validSelection = ['pending', 'approved', 'not_selected'];
+      if (!validSelection.includes(selectionStatus)) {
+        return NextResponse.json({ success: false, message: 'ಅಮಾನ್ಯ ಆಯ್ಕೆ ಸ್ಥಿತಿ.' }, { status: 400 });
+      }
+      updateData.selectionStatus = selectionStatus;
+    }
+
+    if (paymentStatus) {
+      const validPayment = ['pending', 'paid', 'rejected'];
+      if (!validPayment.includes(paymentStatus)) {
+        return NextResponse.json({ success: false, message: 'ಅಮಾನ್ಯ ಪಾವತಿ ಸ್ಥಿತಿ.' }, { status: 400 });
+      }
+      updateData.paymentStatus = paymentStatus;
     }
 
     const updated = await prisma.player.update({
       where: { id: playerId },
-      data: { selectionStatus },
+      data: updateData,
     });
 
     await logAdminActivity(
       session.id,
       session.username,
-      'UPDATE_PLAYER_SELECTION',
+      'UPDATE_PLAYER_STATUS',
       'PLAYER',
       playerId,
-      { newStatus: selectionStatus, playerCode: updated.registrationCode }
+      { updateData, playerCode: updated.registrationCode }
     );
 
     return NextResponse.json({
       success: true,
       player: updated,
-      message: 'ಆಟಗಾರರ ಆಯ್ಕೆ ಸ್ಥಿತಿ ಯಶಸ್ವಿಯಾಗಿ ನವೀಕರಿಸಲಾಗಿದೆ.',
+      message: 'ಆಟಗಾರರ ವಿವರಗಳು ಯಶಸ್ವಿಯಾಗಿ ನವೀಕರಿಸಲಾಗಿದೆ.',
     });
   } catch (error) {
     console.error('Update player error:', error);

@@ -44,7 +44,7 @@ function SuccessContent() {
 
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-950 border border-emerald-500/40 text-emerald-400 text-xs font-bold mb-2">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>ಶುಲ್ಕ ಪಾವತಿ ಮತ್ತು ನೋಂದಣಿ ಯಶಸ್ವಿಯಾಗಿದೆ</span>
+            <span>ನೋಂದಣಿ ಮತ್ತು ಪಾವತಿ ರಶೀದಿ ಯಶಸ್ವಿಯಾಗಿ ಸಲ್ಲಿಕೆಯಾಗಿದೆ</span>
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-black text-white">
@@ -62,7 +62,7 @@ function SuccessContent() {
               {code}
             </div>
             <p className="text-xs text-amber-200/90 font-medium mt-1">
-              * ನಿಮ್ಮ ಆಯ್ಕೆಯ ಸ್ಥಿತಿ (Selection Status) ತಿಳಿಯಲು ಈ ಕೋಡ್ ಕಡ್ಡಾಯವಾಗಿದೆ.
+              * ನಿಮ್ಮ ಪಾವತಿ ದೃಢೀಕರಣ ಹಾಗೂ ಆಯ್ಕೆಯ ಸ್ಥಿತಿ (Selection Status) ತಿಳಿಯಲು ಈ ಕೋಡ್ ಕಡ್ಡಾಯವಾಗಿದೆ.
             </p>
 
             <div className="mt-4 flex items-center justify-center gap-3">
@@ -113,8 +113,9 @@ function SuccessContent() {
 
           <div className="text-left bg-blue-950/40 border border-blue-500/30 p-4 rounded-xl text-xs text-blue-200 leading-relaxed mb-6">
             <div className="font-bold text-white mb-1">ಮುಖ್ಯ ಸೂಚನೆ:</div>
-            ೧. ಪಂದ್ಯಾವಳಿ ಸಮಿತಿಯು ಆಟಗಾರರ ಪಟ್ಟಿಯನ್ನು ಪರಿಶೀಲಿಸಿ ಶೀಘ್ರದಲ್ಲೇ ಅಂತಿಮ ತಂಡಗಳ ಹರಾಜು ಮತ್ತು ಆಯ್ಕೆ ಪಟ್ಟಿಯನ್ನು ಪ್ರಕಟಿಸಲಿದೆ.<br />
-            ೨. ನಿಮ್ಮ ನೋಂದಣಿ ಕೋಡ್ ಅನ್ನು ಭದ್ರವಾಗಿ ಇರಿಸಿಕೊಳ್ಳಿ. 'ನೋಂದಣಿ ಸ್ಥಿತಿ ಪರಿಶೀಲಿಸಿ' ಪುಟದಲ್ಲಿ ಈ ಕೋಡ್ ನಮೂದಿಸಿ ನಿಮ್ಮ ಆಯ್ಕೆಯ ಫಲಿತಾಂಶವನ್ನು ವೀಕ್ಷಿಸಬಹುದು.
+            ೧. ನೀವು ಅಪ್‌ಲೋಡ್ ಮಾಡಿದ ಶುಲ್ಕ ಪಾವತಿಯ ರಶೀದಿಯನ್ನು ಪಂದ್ಯಾವಳಿ ಸಮಿತಿಯು ಪರಿಶೀಲಿಸಿ ದೃಢೀಕರಿಸಲಿದೆ.<br />
+            ೨. ಪಂದ್ಯಾವಳಿ ಸಮಿತಿಯು ಆಟಗಾರರ ಪಟ್ಟಿಯನ್ನು ಪರಿಶೀಲಿಸಿ ಶೀಘ್ರದಲ್ಲೇ ಅಂತಿಮ ತಂಡಗಳ ಹರಾಜು ಮತ್ತು ಆಯ್ಕೆ ಪಟ್ಟಿಯನ್ನು ಪ್ರಕಟಿಸಲಿದೆ.<br />
+            ೩. ನಿಮ್ಮ ನೋಂದಣಿ ಕೋಡ್ ಅನ್ನು ಭದ್ರವಾಗಿ ಇರಿಸಿಕೊಳ್ಳಿ. 'ನೋಂದಣಿ ಸ್ಥಿತಿ ಪರಿಶೀಲಿಸಿ' ಪುಟದಲ್ಲಿ ಈ ಕೋಡ್ ನಮೂದಿಸಿ ನಿಮ್ಮ ಪಾವತಿ ಪರಿಶೀಲನೆ ಹಾಗೂ ಆಯ್ಕೆಯ ಫಲಿತಾಂಶವನ್ನು ವೀಕ್ಷಿಸಬಹುದು.
           </div>
 
           <div className="space-y-3">

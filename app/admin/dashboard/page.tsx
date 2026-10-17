@@ -33,6 +33,7 @@ import {
   UserCheck,
   UserX,
   X,
+  FileCheck2,
 } from 'lucide-react';
 
 export default function AdminDashboardPage() {
@@ -62,6 +63,11 @@ export default function AdminDashboardPage() {
   // Photo Preview Modal
   const [previewPhotoUrl, setPreviewPhotoUrl] = useState<string | null>(null);
   const [previewPlayerName, setPreviewPlayerName] = useState<string>('');
+
+  // Payment Receipt Preview Modal
+  const [previewReceiptUrl, setPreviewReceiptUrl] = useState<string | null>(null);
+  const [previewReceiptPlayerName, setPreviewReceiptPlayerName] = useState<string>('');
+  const [previewReceiptPlayerId, setPreviewReceiptPlayerId] = useState<string | null>(null);
 
   // Payments Ledger
   const [payments, setPayments] = useState<any[]>([]);
@@ -257,6 +263,26 @@ export default function AdminDashboardPage() {
       const data = await res.json();
       if (data.success) {
         showFeedback('success', 'ಆಟಗಾರರ ಆಯ್ಕೆ ಸ್ಥಿತಿಯನ್ನು ನವೀಕರಿಸಲಾಗಿದೆ.');
+        loadPlayers();
+        loadStats();
+      } else {
+        showFeedback('error', data.message || 'ನವೀಕರಣ ವಿಫಲವಾಗಿದೆ.');
+      }
+    } catch {
+      showFeedback('error', 'ಸರ್ವರ್ ದೋಷ.');
+    }
+  };
+
+  const handleUpdatePayment = async (playerId: string, status: string) => {
+    try {
+      const res = await fetch('/api/admin/players', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerId, paymentStatus: status }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showFeedback('success', `ಪಾವತಿ ಸ್ಥಿತಿ ${status === 'paid' ? 'ದೃಢೀಕರಿಸಲಾಗಿದೆ' : status === 'rejected' ? 'ತಿರಸ್ಕರಿಸಲಾಗಿದೆ' : 'ಬಾಕಿ ಇರಿಸಲಾಗಿದೆ'}!`);
         loadPlayers();
         loadStats();
       } else {
@@ -728,27 +754,28 @@ export default function AdminDashboardPage() {
                   <table className="w-full text-left text-xs sm:text-sm">
                     <thead className="bg-[#0e2444] text-[#fbbf24] uppercase text-xs font-bold border-b border-gray-700">
                       <tr>
-                        <th className="p-3.5">ಭಾವಚಿತ್ರ</th>
-                        <th className="p-3.5">ನೋಂದಣಿ ಕೋಡ್</th>
-                        <th className="p-3.5">ಆಟಗಾರರ ಹೆಸರು</th>
-                        <th className="p-3.5">ಮೊಬೈಲ್</th>
-                        <th className="p-3.5">ವಿಭಾಗ</th>
-                        <th className="p-3.5">ಪಾವತಿ</th>
-                        <th className="p-3.5">ಆಯ್ಕೆ ಸ್ಥಿತಿ</th>
-                        <th className="p-3.5 text-center">ಕ್ರಮಗಳು (Actions)</th>
+                        <th className="p-3">ಭಾವಚಿತ್ರ</th>
+                        <th className="p-3">ನೋಂದಣಿ ಕೋಡ್</th>
+                        <th className="p-3">ಆಟಗಾರರ ಹೆಸರು</th>
+                        <th className="p-3">ಮೊಬೈಲ್</th>
+                        <th className="p-3">ವಿಭಾಗ</th>
+                        <th className="p-3">ಯಾರ ಮಾರ್ಗದರ್ಶನ</th>
+                        <th className="p-3">ಪಾವತಿ ರಶೀದಿ & ಸ್ಥಿತಿ</th>
+                        <th className="p-3">ಆಯ್ಕೆ ಸ್ಥಿತಿ</th>
+                        <th className="p-3 text-center">ಕ್ರಮಗಳು</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-800 text-gray-200">
                       {loadingPlayers ? (
                         <tr>
-                          <td colSpan={8} className="p-8 text-center text-gray-400">
+                          <td colSpan={9} className="p-8 text-center text-gray-400">
                             <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-[#fbbf24]" />
                             <span>ಆಟಗಾರರ ಮಾಹಿತಿಯನ್ನು ಲೋಡ್ ಮಾಡಲಾಗುತ್ತಿದೆ...</span>
                           </td>
                         </tr>
                       ) : players.length === 0 ? (
                         <tr>
-                          <td colSpan={8} className="p-8 text-center text-gray-400">
+                          <td colSpan={9} className="p-8 text-center text-gray-400">
                             ಯಾವುದೇ ಆಟಗಾರರ ದಾಖಲೆ ಕಂಡುಬಂದಿಲ್ಲ.
                           </td>
                         </tr>
@@ -764,11 +791,10 @@ export default function AdminDashboardPage() {
                                 }}
                                 className="relative w-11 h-11 rounded-lg overflow-hidden border border-[#d4af37]/60 block group"
                               >
-                                <Image
+                                <img
                                   src={p.photoUrl}
                                   alt={p.fullName}
-                                  fill
-                                  className="object-cover group-hover:scale-110 transition-transform"
+                                  className="w-full h-full object-cover group-hover:scale-110 transition-transform"
                                 />
                               </button>
                             </td>
@@ -798,21 +824,71 @@ export default function AdminDashboardPage() {
                               </span>
                             </td>
 
-                            {/* Payment Status */}
+                            {/* Guidance By */}
                             <td className="p-3">
-                              {p.paymentStatus === 'paid' ? (
-                                <span className="px-2 py-0.5 rounded text-xs font-bold bg-emerald-950 text-emerald-400 border border-emerald-500/40">
-                                  ಪಾವತಿಸಲಾಗಿದೆ
-                                </span>
-                              ) : p.paymentStatus === 'failed' ? (
-                                <span className="px-2 py-0.5 rounded text-xs font-bold bg-red-950 text-red-400 border border-red-500/40">
-                                  ವಿಫಲವಾಗಿದೆ
-                                </span>
-                              ) : (
-                                <span className="px-2 py-0.5 rounded text-xs font-bold bg-amber-950 text-amber-400 border border-amber-500/40">
-                                  ಬಾಕಿ
-                                </span>
-                              )}
+                              <span className="text-xs font-medium text-amber-200 bg-[#061224] px-2 py-1 rounded border border-gray-700/80">
+                                {p.guidanceBy || '-'}
+                              </span>
+                            </td>
+
+                            {/* Payment Receipt & Status */}
+                            <td className="p-3">
+                              <div className="space-y-1.5">
+                                {p.paymentReceiptUrl ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setPreviewReceiptUrl(p.paymentReceiptUrl);
+                                      setPreviewReceiptPlayerName(p.fullName);
+                                      setPreviewReceiptPlayerId(p.id);
+                                    }}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-[#132d54] hover:bg-[#1a3a6b] text-[#fbbf24] border border-[#d4af37]/40 text-xs font-bold transition-colors"
+                                  >
+                                    <FileCheck2 className="w-3.5 h-3.5" />
+                                    <span>ರಶೀದಿ ನೋಡಿ</span>
+                                  </button>
+                                ) : (
+                                  <span className="text-gray-500 text-xs italic">ರಶೀದಿ ಇಲ್ಲ</span>
+                                )}
+
+                                <div>
+                                  {p.paymentStatus === 'paid' ? (
+                                    <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-500/40">
+                                      ದೃಢೀಕರಿಸಲಾಗಿದೆ
+                                    </span>
+                                  ) : p.paymentStatus === 'rejected' ? (
+                                    <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-red-950 text-red-400 border border-red-500/40">
+                                      ತಿರಸ್ಕರಿಸಲಾಗಿದೆ
+                                    </span>
+                                  ) : (
+                                    <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-950 text-amber-400 border border-amber-500/40">
+                                      ಪರಿಶೀಲನೆಯಲ್ಲಿದೆ
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Fast Verification Buttons */}
+                                <div className="flex items-center gap-1 pt-0.5">
+                                  {p.paymentStatus !== 'paid' && (
+                                    <button
+                                      onClick={() => handleUpdatePayment(p.id, 'paid')}
+                                      title="ಪಾವತಿ ದೃಢೀಕರಿಸಿ (Approve Payment)"
+                                      className="px-2 py-0.5 rounded bg-emerald-900/70 hover:bg-emerald-800 text-emerald-300 border border-emerald-600 text-[10px] font-bold"
+                                    >
+                                      ದೃಢೀಕರಿಸಿ
+                                    </button>
+                                  )}
+                                  {p.paymentStatus !== 'rejected' && (
+                                    <button
+                                      onClick={() => handleUpdatePayment(p.id, 'rejected')}
+                                      title="ರಶೀದಿ ತಿರಸ್ಕರಿಸಿ (Reject Receipt)"
+                                      className="px-2 py-0.5 rounded bg-red-900/70 hover:bg-red-800 text-red-300 border border-red-600 text-[10px] font-bold"
+                                    >
+                                      ತಿರಸ್ಕರಿಸಿ
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
                             </td>
 
                             {/* Selection Status */}
@@ -1357,6 +1433,66 @@ export default function AdminDashboardPage() {
                 className="object-contain"
               />
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Full Payment Receipt Preview Modal */}
+      {previewReceiptUrl && (
+        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#0a192f] rounded-2xl border-2 border-[#fbbf24] p-5 max-w-lg w-full relative shadow-2xl space-y-4">
+            <button
+              onClick={() => {
+                setPreviewReceiptUrl(null);
+                setPreviewReceiptPlayerId(null);
+              }}
+              className="absolute top-3 right-3 p-1 rounded-full bg-gray-800 text-gray-300 hover:text-white"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <div className="text-center">
+              <h3 className="text-lg font-bold text-white">{previewReceiptPlayerName}</h3>
+              <p className="text-xs text-[#fbbf24] font-medium">ಶುಲ್ಕ ಪಾವತಿಯ ರಶೀದಿ / ಸ್ಕ್ರೀನ್‌ಶಾಟ್ (Payment Receipt)</p>
+            </div>
+            <div className="relative w-full h-96 rounded-xl overflow-hidden border border-gray-700 bg-black/40">
+              <Image
+                src={previewReceiptUrl}
+                alt={`Receipt for ${previewReceiptPlayerName}`}
+                fill
+                className="object-contain"
+              />
+            </div>
+            {previewReceiptPlayerId && (
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-800">
+                <div className="text-xs text-gray-400">ರಶೀದಿ ಪರಿಶೀಲಿಸಿ ಸ್ಥಿತಿ ಬದಲಾಯಿಸಿ:</div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      if (previewReceiptPlayerId) {
+                        handleUpdatePayment(previewReceiptPlayerId, 'paid');
+                        setPreviewReceiptUrl(null);
+                        setPreviewReceiptPlayerId(null);
+                      }
+                    }}
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md transition"
+                  >
+                    ✓ ದೃಢೀಕರಿಸಿ (Mark Paid)
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (previewReceiptPlayerId) {
+                        handleUpdatePayment(previewReceiptPlayerId, 'rejected');
+                        setPreviewReceiptUrl(null);
+                        setPreviewReceiptPlayerId(null);
+                      }
+                    }}
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold bg-red-600 hover:bg-red-500 text-white shadow-md transition"
+                  >
+                    ✗ ತಿರಸ್ಕರಿಸಿ (Reject)
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

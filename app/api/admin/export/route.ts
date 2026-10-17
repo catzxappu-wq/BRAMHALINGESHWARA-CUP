@@ -33,8 +33,9 @@ export async function GET() {
     };
 
     const paymentKannada: Record<string, string> = {
-      paid: 'ಪಾವತಿಸಲಾಗಿದೆ',
-      pending: 'ಬಾಕಿ',
+      paid: 'ಪಾವತಿ ದೃಢೀಕರಿಸಲಾಗಿದೆ',
+      pending: 'ಪಾವತಿ ರಶೀದಿ ಪರಿಶೀಲನೆಯಲ್ಲಿದೆ',
+      rejected: 'ಪಾವತಿ ರಶೀದಿ ತಿರಸ್ಕರಿಸಲಾಗಿದೆ',
       failed: 'ವಿಫಲ',
       cancelled: 'ರದ್ದು',
     };
@@ -50,29 +51,28 @@ export async function GET() {
       'ಆಟಗಾರರ ಹೆಸರು',
       'ಮೊಬೈಲ್ ಸಂಖ್ಯೆ',
       'ಆಟಗಾರರ ವಿಭಾಗ',
+      'ಯಾರ ಮಾರ್ಗದರ್ಶನ',
       'ಪಾವತಿ ಸ್ಥಿತಿ',
-      'ಶುಲ್ಕ ಮೊತ್ತ',
-      'ಪಾವತಿ ID / Order ID',
+      'UTR / ವಹಿವಾಟು ಸಂಖ್ಯೆ',
       'ಆಯ್ಕೆ ಸ್ಥಿತಿ',
       'ವಿಳಾಸ',
       'ನೋಂದಣಿ ದಿನಾಂಕ',
     ];
 
     const escapeCsv = (str: string) => {
-      const escaped = str.replace(/"/g, '""');
+      const escaped = (str || '').replace(/"/g, '""');
       return `"${escaped}"`;
     };
 
     const rows = players.map((p) => {
-      const payment = p.payments[0];
       return [
         escapeCsv(p.registrationCode || 'N/A'),
         escapeCsv(p.fullName),
         escapeCsv(p.mobileNumber),
         escapeCsv(categoryKannada[p.playerCategory] || p.playerCategory),
+        escapeCsv(p.guidanceBy || '-'),
         escapeCsv(paymentKannada[p.paymentStatus] || p.paymentStatus),
-        escapeCsv(payment ? `₹${payment.amount}` : '-'),
-        escapeCsv(payment?.gatewayPaymentId || payment?.gatewayOrderId || '-'),
+        escapeCsv(p.transactionReference || '-'),
         escapeCsv(selectionKannada[p.selectionStatus] || p.selectionStatus),
         escapeCsv(p.address),
         escapeCsv(new Date(p.createdAt).toLocaleString('kn-IN')),

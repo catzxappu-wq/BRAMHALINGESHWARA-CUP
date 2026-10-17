@@ -14,19 +14,23 @@ model Player {
   mobileNumber       String
   address            String
   playerCategory     String    // "batsman", "bowler", "all_rounder"
-  photoStorageKey    String
-  paymentStatus      String    @default("pending") // "pending", "paid", "failed", "cancelled"
-  selectionStatus    String    @default("pending") // "pending", "approved", "not_selected"
-  registrationStatus String    @default("pending_payment") // "pending_payment", "completed", "cancelled"
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  photoStorageKey          String
+  guidanceBy               String?   // "ಯಾರ ಮಾರ್ಗದರ್ಶನದಲ್ಲಿ ಈ ಫಾರ್ಮ್ ತುಂಬುತ್ತಿದ್ದೀರಿ"
+  paymentReceiptStorageKey String?   // Payment screenshot / receipt
+  transactionReference     String?   // UPI / UTR transaction reference
+  paymentStatus            String    @default("pending") // "pending", "paid", "rejected"
+  selectionStatus          String    @default("pending") // "pending", "approved", "not_selected"
+  registrationStatus       String    @default("completed") // "completed", "cancelled"
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
 
-  payments           Payment[]
+  payments                 Payment[]
 
   @@index([mobileNumber])
   @@index([registrationCode])
   @@index([paymentStatus])
   @@index([selectionStatus])
+  @@index([guidanceBy])
 }
 
 model Payment {

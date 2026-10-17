@@ -68,8 +68,9 @@ export async function POST(req: NextRequest) {
     };
 
     const paymentLabels: Record<string, { text: string; color: string }> = {
-      pending: { text: 'ಪಾವತಿ ಬಾಕಿ', color: 'yellow' },
-      paid: { text: 'ಪಾವತಿ ಪೂರ್ಣಗೊಂಡಿದೆ', color: 'green' },
+      pending: { text: 'ಪಾವತಿ ರಶೀದಿ ಪರಿಶೀಲನೆಯಲ್ಲಿದೆ', color: 'yellow' },
+      paid: { text: 'ಶುಲ್ಕ ಪಾವತಿ ದೃಢೀಕರಿಸಲಾಗಿದೆ', color: 'green' },
+      rejected: { text: 'ಪಾವತಿ ರಶೀದಿ ತಿರಸ್ಕರಿಸಲಾಗಿದೆ', color: 'red' },
       failed: { text: 'ಪಾವತಿ ವಿಫಲವಾಗಿದೆ', color: 'red' },
       cancelled: { text: 'ಪಾವತಿ ರದ್ದಾಗಿದೆ', color: 'gray' },
     };
@@ -81,8 +82,8 @@ export async function POST(req: NextRequest) {
     };
 
     const registrationLabels: Record<string, string> = {
-      pending_payment: 'ಪಾವತಿಗಾಗಿ ಕಾಯಲಾಗುತ್ತಿದೆ',
-      completed: 'ನೋಂದಣಿ ಪೂರ್ಣಗೊಂಡಿದೆ',
+      pending_payment: 'ಪರಿಶೀಲನೆಯಲ್ಲಿದೆ',
+      completed: 'ನೋಂದಣಿ ಸ್ವೀಕರಿಸಲಾಗಿದೆ',
       cancelled: 'ನೋಂದಣಿ ರದ್ದಾಗಿದೆ',
     };
 
