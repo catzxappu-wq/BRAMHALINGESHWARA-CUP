@@ -269,7 +269,7 @@ function PaymentContent() {
               <div className="flex items-center justify-between py-3 border-b border-gray-700 text-gray-200 text-base">
                 <span className="font-bold text-white">ಒಟ್ಟು ಪಾವತಿಸಬೇಕಾದ ಶುಲ್ಕ:</span>
                 <span className="text-2xl font-black text-[#fbbf24]">
-                  ₹250.00
+                  ₹{Number(player.registrationFee ?? 250).toFixed(2)}
                 </span>
               </div>
             </div>
@@ -291,7 +291,7 @@ function PaymentContent() {
               ) : (
                 <>
                   <CreditCard className="w-5 h-5 text-gray-950" />
-                  <span>ಈಗಲೇ ಪಾವತಿಸಿ (Pay ₹250 Securely)</span>
+                  <span>ಈಗಲೇ ಪಾವತಿಸಿ (Pay ₹{player.registrationFee ?? 250} Securely)</span>
                 </>
               )}
             </button>
