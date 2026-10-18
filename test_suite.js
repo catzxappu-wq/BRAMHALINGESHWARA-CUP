@@ -140,6 +140,23 @@ async function runTests() {
       data: { selectionStatus: 'not_selected' },
     });
     assert(rejectedPlayer.selectionStatus === 'not_selected', 'Admin successfully rejected player (status=not_selected)');
+    assert(rejectedPlayer.registrationCode === regCode, 'Rejected player strictly retains their original registration code');
+
+    // Verify rejected applicant can query their status using their code
+    const checkRejected = await prisma.player.findFirst({
+      where: { registrationCode: regCode },
+      select: { registrationCode: true, selectionStatus: true },
+    });
+    assert(checkRejected.selectionStatus === 'not_selected', 'Rejected applicant can query /status and see they are rejected');
+
+    // Verify next generated code NEVER reuses the rejected code
+    const nextSeq = await prisma.codeSequence.upsert({
+      where: { id: 'player_code' },
+      update: { lastNumber: { increment: 1 } },
+      create: { id: 'player_code', lastNumber: 1 },
+    });
+    const nextCode = `SBK26-${String(nextSeq.lastNumber).padStart(6, '0')}`;
+    assert(nextCode !== regCode, `Next code (${nextCode}) strictly does NOT reuse rejected code (${regCode})`);
 
     // Permanent Deletion
     await prisma.player.delete({ where: { id: testPlayer.id } });

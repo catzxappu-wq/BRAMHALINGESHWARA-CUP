@@ -83,10 +83,11 @@ export default function StatusPage() {
           </div>
         );
       case 'not_selected':
+      case 'rejected':
         return (
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-950 border border-red-500 text-red-300 font-bold text-sm">
             <XCircle className="w-5 h-5 text-red-400" />
-            <span>{kannadaText}</span>
+            <span>ತಿರಸ್ಕರಿಸಲಾಗಿದೆ (Rejected)</span>
           </div>
         );
       default:
@@ -238,9 +239,19 @@ export default function StatusPage() {
               </div>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 leading-relaxed text-center">
-              * ಆಡಳಿತ ಮಂಡಳಿಯು ಅಂತಿಮ ತಂಡಗಳನ್ನು ಪ್ರಕಟಿಸಿದ ನಂತರ ಆಯ್ಕೆಯಾದ ಆಟಗಾರರಿಗೆ ಪ್ರತ್ಯೇಕವಾಗಿ ಕರೆ ಮಾಡಿ ಮಾಹಿತಿ ನೀಡಲಾಗುತ್ತದೆ.
-            </div>
+            {result.selectionStatus === 'not_selected' || result.selectionStatus === 'rejected' ? (
+              <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-200 leading-relaxed text-center font-medium">
+                * ಕ್ಷಮಿಸಿ, ಆಡಳಿತ ಮಂಡಳಿಯ ನಿಯಮಾವಳಿಗಳು ಹಾಗೂ ಪರಿಶೀಲನೆಯ ಅನ್ವಯ ಈ ಅರ್ಜಿಯನ್ನು ತಿರಸ್ಕರಿಸಲಾಗಿದೆ. ಹೆಚ್ಚಿನ ವಿವರಗಳಿಗಾಗಿ ಪಂದ್ಯಾವಳಿ ಆಯೋಜಕರನ್ನು ಸಂಪರ್ಕಿಸಿ.
+              </div>
+            ) : result.selectionStatus === 'approved' ? (
+              <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-200 leading-relaxed text-center font-medium">
+                * ಅಭಿನಂದನೆಗಳು! ನೀವು ಶ್ರೀ ಬ್ರಹ್ಮಲಿಂಗೇಶ್ವರ ಕಪ್ - 2026 ಪಂದ್ಯಾವಳಿಗೆ ಆಯ್ಕೆಯಾಗಿದ್ದೀರಿ. ಸಮಿತಿಯು ನಿಮಗೆ ಶೀಘ್ರದಲ್ಲೇ ಕರೆ ಮಾಡಿ ತಂಡದ ವಿವರಗಳನ್ನು ನೀಡಲಿದೆ.
+              </div>
+            ) : (
+              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 leading-relaxed text-center">
+                * ನಿಮ್ಮ ಅರ್ಜಿಯನ್ನು ಪರಿಶೀಲಿಸಲಾಗುತ್ತಿದೆ. ಆಡಳಿತ ಮಂಡಳಿಯು ಅಂತಿಮ ತಂಡಗಳನ್ನು ಪ್ರಕಟಿಸಿದ ನಂತರ ಆಯ್ಕೆಯಾದ ಆಟಗಾರರಿಗೆ ಪ್ರತ್ಯೇಕವಾಗಿ ಕರೆ ಮಾಡಿ ಮಾಹಿತಿ ನೀಡಲಾಗುತ್ತದೆ.
+              </div>
+            )}
           </div>
         )}
       </div>
