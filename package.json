@@ -4,16 +4,20 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000",
-    "build": "prisma generate && next build",
+    "build": "node prisma/prepare-schema.js && prisma generate && next build",
     "start": "next start -p 3000",
     "lint": "next lint",
-    "prisma:generate": "prisma generate",
-    "prisma:push": "prisma db push",
-    "prisma:seed": "node prisma/seed.js"
+    "prisma:generate": "node prisma/prepare-schema.js && prisma generate",
+    "prisma:push": "node prisma/prepare-schema.js && prisma db push",
+    "prisma:seed": "node prisma/seed.js",
+    "db:push": "node prisma/prepare-schema.js && prisma db push",
+    "db:seed": "node prisma/seed.js"
   },
   "dependencies": {
     "@prisma/client": "^5.21.1",
+    "@vercel/blob": "^2.8.2",
     "bcryptjs": "^2.4.3",
+    "cloudinary": "^2.11.0",
     "cookie": "^0.6.0",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.453.0",

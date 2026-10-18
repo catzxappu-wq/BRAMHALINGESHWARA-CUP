@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { checkRegistrationCapacity } from '@/lib/capacity';
 import { generateUniqueRegistrationCode } from '@/lib/codeGenerator';
+import { uploadToCloud } from '@/lib/cloudStorage';
 import fs from 'fs';
 import path from 'path';
 
@@ -76,15 +77,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Safe photo key handling
+    // Upload photo to cloud storage if data URI or file
     let safePhotoKey = photoStorageKey;
-    if (typeof photoStorageKey === 'string' && !photoStorageKey.startsWith('data:')) {
+    if (typeof photoStorageKey === 'string' && photoStorageKey.startsWith('data:')) {
+      const cloudRes = await uploadToCloud(photoStorageKey, 'players');
+      safePhotoKey = cloudRes.url;
+    } else if (typeof photoStorageKey === 'string' && !photoStorageKey.startsWith('http')) {
       safePhotoKey = path.basename(photoStorageKey);
     }
 
-    // Safe payment receipt key handling
+    // Upload payment receipt to cloud storage if data URI or file
     let safeReceiptKey = paymentReceiptStorageKey;
-    if (typeof paymentReceiptStorageKey === 'string' && !paymentReceiptStorageKey.startsWith('data:')) {
+    if (typeof paymentReceiptStorageKey === 'string' && paymentReceiptStorageKey.startsWith('data:')) {
+      const cloudRes = await uploadToCloud(paymentReceiptStorageKey, 'receipts');
+      safeReceiptKey = cloudRes.url;
+    } else if (typeof paymentReceiptStorageKey === 'string' && !paymentReceiptStorageKey.startsWith('http')) {
       safeReceiptKey = path.basename(paymentReceiptStorageKey);
     }
 

@@ -138,9 +138,10 @@ export default function RegisterPage() {
       setPhotoPreview(compressedUrl);
       setPhotoStorageKey(compressedUrl);
 
-      // Background server upload attempt
+      // Background server upload attempt to cloud
       const formData = new FormData();
       formData.append('photo', file);
+      formData.append('folder', 'players');
       fetch('/api/upload', { method: 'POST', body: formData })
         .then((r) => r.json())
         .then((data) => {
@@ -181,9 +182,10 @@ export default function RegisterPage() {
       setReceiptPreview(compressedUrl);
       setReceiptStorageKey(compressedUrl);
 
-      // Background server upload attempt
+      // Background server upload attempt to cloud
       const formData = new FormData();
-      formData.append('photo', file);
+      formData.append('receipt', file);
+      formData.append('folder', 'receipts');
       fetch('/api/upload', { method: 'POST', body: formData })
         .then((r) => r.json())
         .then((data) => {
