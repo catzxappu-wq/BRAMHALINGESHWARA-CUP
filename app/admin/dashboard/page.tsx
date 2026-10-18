@@ -31,6 +31,8 @@ import {
   UserX,
   X,
   Sparkles,
+  Trash2,
+  Ban,
 } from 'lucide-react';
 
 export default function AdminDashboardPage() {
@@ -236,7 +238,13 @@ export default function AdminDashboardPage() {
       });
       const data = await res.json();
       if (data.success) {
-        showFeedback('success', 'ಆಟಗಾರರ ಆಯ್ಕೆ ಸ್ಥಿತಿಯನ್ನು ನವೀಕರಿಸಲಾಗಿದೆ.');
+        const msg =
+          status === 'approved'
+            ? 'ಆಟಗಾರನನ್ನು ಆಯ್ಕೆ ಮಾಡಲಾಗಿದೆ (Approved).'
+            : status === 'not_selected' || status === 'rejected'
+            ? 'ಅರ್ಜಿಯನ್ನು ತಿರಸ್ಕರಿಸಲಾಗಿದೆ (Rejected).'
+            : 'ಅರ್ಜಿಯನ್ನು ಪರಿಶೀಲನಾ ಹಂತಕ್ಕೆ ಇಡಲಾಗಿದೆ (Pending).';
+        showFeedback('success', msg);
         loadPlayers();
         loadStats();
       } else {
@@ -246,6 +254,29 @@ export default function AdminDashboardPage() {
       showFeedback('error', 'ಸರ್ವರ್ ದೋಷ.');
     }
   };
+
+  const handleDeletePlayer = async (playerId: string, playerName: string, regCode: string) => {
+    const confirmMessage = `ಖಂಡಿತವಾಗಿಯೂ "${playerName}" (${regCode || ''}) ಅವರ ಅರ್ಜಿಯನ್ನು ಶಾಶ್ವತವಾಗಿ ಅಳಿಸಲು ಬಯಸುವಿರಾ?\n\nಈ ಕ್ರಿಯೆಯನ್ನು ಹಿಂಪಡೆಯಲು ಸಾಧ್ಯವಿಲ್ಲ!`;
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/admin/players?id=${playerId}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (data.success) {
+        showFeedback('success', data.message || 'ಆಟಗಾರರ ಅರ್ಜಿಯನ್ನು ಶಾಶ್ವತವಾಗಿ ಅಳಿಸಲಾಗಿದೆ.');
+        loadPlayers();
+        loadStats();
+      } else {
+        showFeedback('error', data.message || 'ಅಳಿಸುವಲ್ಲಿ ದೋಷ ಉಂಟಾಗಿದೆ.');
+      }
+    } catch {
+      showFeedback('error', 'ಸರ್ವರ್ ದೋಷ.');
+    }
+  };
+
 
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -347,9 +378,10 @@ export default function AdminDashboardPage() {
           </span>
         );
       case 'not_selected':
+      case 'rejected':
         return (
           <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-red-950 text-red-400 border border-red-500/40">
-            ಆಯ್ಕೆಯಾಗಿಲ್ಲ
+            ತಿರಸ್ಕರಿಸಲಾಗಿದೆ
           </span>
         );
       default:
@@ -732,7 +764,7 @@ export default function AdminDashboardPage() {
                       <option value="">ಎಲ್ಲ ಆಯ್ಕೆ ಸ್ಥಿತಿಗಳು</option>
                       <option value="pending">ಪರಿಶೀಲನೆಯಲ್ಲಿದೆ (Pending)</option>
                       <option value="approved">ಆಯ್ಕೆಯಾಗಿದ್ದಾರೆ (Approved)</option>
-                      <option value="not_selected">ಆಯ್ಕೆಯಾಗಿಲ್ಲ (Not Selected)</option>
+                      <option value="not_selected">ತಿರಸ್ಕರಿಸಲಾಗಿದೆ (Rejected)</option>
                     </select>
                   </div>
                 </div>
@@ -834,7 +866,7 @@ export default function AdminDashboardPage() {
                               {selectionBadge(p.selectionStatus)}
                             </td>
 
-                            {/* Actions: Approve / Not Selected */}
+                            {/* Actions: Approve / Reject / Pending / Delete */}
                             <td className="p-3 text-center">
                               <div className="flex items-center justify-center gap-1.5">
                                 <button
@@ -842,7 +874,7 @@ export default function AdminDashboardPage() {
                                   title="ಆಯ್ಕೆ ಮಾಡಿ (Approve)"
                                   className={`p-1.5 rounded-lg border text-xs font-bold transition-all ${
                                     p.selectionStatus === 'approved'
-                                      ? 'bg-emerald-600 text-white border-emerald-400'
+                                      ? 'bg-emerald-600 text-white border-emerald-400 shadow-md shadow-emerald-900/50'
                                       : 'bg-[#132d54] text-emerald-400 border-emerald-600/40 hover:bg-emerald-950'
                                   }`}
                                 >
@@ -850,14 +882,32 @@ export default function AdminDashboardPage() {
                                 </button>
                                 <button
                                   onClick={() => handleUpdateSelection(p.id, 'not_selected')}
-                                  title="ತಿರಸ್ಕರಿಸಿ (Not Selected)"
+                                  title="ತಿರಸ್ಕರಿಸಿ (Reject)"
                                   className={`p-1.5 rounded-lg border text-xs font-bold transition-all ${
-                                    p.selectionStatus === 'not_selected'
-                                      ? 'bg-red-600 text-white border-red-400'
+                                    p.selectionStatus === 'not_selected' || p.selectionStatus === 'rejected'
+                                      ? 'bg-red-600 text-white border-red-400 shadow-md shadow-red-900/50'
                                       : 'bg-[#132d54] text-red-400 border-red-600/40 hover:bg-red-950'
                                   }`}
                                 >
-                                  <UserX className="w-4 h-4" />
+                                  <Ban className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleUpdateSelection(p.id, 'pending')}
+                                  title="ಪರಿಶೀಲನೆಯಲ್ಲಿದೆ (Pending)"
+                                  className={`p-1.5 rounded-lg border text-xs font-bold transition-all ${
+                                    p.selectionStatus === 'pending'
+                                      ? 'bg-blue-600 text-white border-blue-400 shadow-md shadow-blue-900/50'
+                                      : 'bg-[#132d54] text-blue-400 border-blue-600/40 hover:bg-blue-950'
+                                  }`}
+                                >
+                                  <Clock className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeletePlayer(p.id, p.fullName, p.registrationCode)}
+                                  title="ಶಾಶ್ವತವಾಗಿ ಅಳಿಸಿ (Delete Player)"
+                                  className="p-1.5 rounded-lg border border-red-800/80 bg-red-950/70 text-red-400 hover:bg-red-600 hover:text-white hover:border-red-500 transition-all shadow-sm"
+                                >
+                                  <Trash2 className="w-4 h-4" />
                                 </button>
                               </div>
                             </td>

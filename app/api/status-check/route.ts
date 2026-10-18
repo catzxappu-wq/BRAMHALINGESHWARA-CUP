@@ -72,7 +72,8 @@ export async function POST(req: NextRequest) {
     const selectionLabels: Record<string, { text: string; color: string }> = {
       pending: { text: 'ಆಯ್ಕೆ ಬಾಕಿಯಿದೆ (ಪರಿಶೀಲನೆಯಲ್ಲಿದೆ)', color: 'blue' },
       approved: { text: 'ಆಯ್ಕೆಯಾಗಿದ್ದಾರೆ (Congratulations!)', color: 'green' },
-      not_selected: { text: 'ಆಯ್ಕೆಯಾಗಿಲ್ಲ', color: 'red' },
+      not_selected: { text: 'ತಿರಸ್ಕರಿಸಲಾಗಿದೆ / ಆಯ್ಕೆಯಾಗಿಲ್ಲ', color: 'red' },
+      rejected: { text: 'ಅರ್ಜಿಯನ್ನು ತಿರಸ್ಕರಿಸಲಾಗಿದೆ (Rejected)', color: 'red' },
     };
 
     const registrationLabels: Record<string, string> = {

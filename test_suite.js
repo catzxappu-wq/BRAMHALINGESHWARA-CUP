@@ -127,17 +127,25 @@ async function runTests() {
     assert(statusQuery.guidanceBy === 'ಪ್ರಜ್ವಲ್ PK (ಕ್ಯಾಪ್ಟನ್)', 'Guidance By verified');
     assert(statusQuery.selectionStatus === 'pending', 'Selection status is pending');
 
-    // TEST 7: Selection Status Update
-    console.log('\n--- Test Group 6: Admin Selection Update ---');
+    // TEST 7: Selection Status Update (Approve, Reject) & Permanent Delete
+    console.log('\n--- Test Group 6: Admin Selection Update & Permanent Delete ---');
     const approvedPlayer = await prisma.player.update({
       where: { id: testPlayer.id },
       data: { selectionStatus: 'approved' },
     });
     assert(approvedPlayer.selectionStatus === 'approved', 'Admin successfully approved player');
 
-    // Clean up test player
+    const rejectedPlayer = await prisma.player.update({
+      where: { id: testPlayer.id },
+      data: { selectionStatus: 'not_selected' },
+    });
+    assert(rejectedPlayer.selectionStatus === 'not_selected', 'Admin successfully rejected player (status=not_selected)');
+
+    // Permanent Deletion
     await prisma.player.delete({ where: { id: testPlayer.id } });
-    console.log('Test player record cleaned up.');
+    const deletedCheck = await prisma.player.findUnique({ where: { id: testPlayer.id } });
+    assert(deletedCheck === null, 'Admin successfully permanently deleted player from database');
+    console.log('Test player record permanently deleted.');
 
     console.log('\n================================================================');
     console.log(`TEST SUITE FINISHED: ${passed} PASSED, ${failed} FAILED`);

@@ -119,15 +119,15 @@ export async function PATCH(req: NextRequest) {
     const updateData: any = {};
 
     if (selectionStatus) {
-      const validSelection = ['pending', 'approved', 'not_selected'];
+      const validSelection = ['pending', 'approved', 'not_selected', 'rejected'];
       if (!validSelection.includes(selectionStatus)) {
         return NextResponse.json({ success: false, message: 'ಅಮಾನ್ಯ ಆಯ್ಕೆ ಸ್ಥಿತಿ.' }, { status: 400 });
       }
-      updateData.selectionStatus = selectionStatus;
+      updateData.selectionStatus = selectionStatus === 'rejected' ? 'not_selected' : selectionStatus;
     }
 
     if (paymentStatus) {
-      const validPayment = ['pending', 'paid', 'rejected'];
+      const validPayment = ['pending', 'paid', 'rejected', 'free'];
       if (!validPayment.includes(paymentStatus)) {
         return NextResponse.json({ success: false, message: 'ಅಮಾನ್ಯ ಪಾವತಿ ಸ್ಥಿತಿ.' }, { status: 400 });
       }
@@ -166,9 +166,10 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    if (session.role !== 'supervisor') {
+    const permitted = session.role === 'supervisor' || (await hasPermission(session, 'delete_player'));
+    if (!permitted) {
       return NextResponse.json(
-        { success: false, message: 'ಕೇವಲ ಮುಖ್ಯ ನಿರ್ವಾಹಕರು ಮಾತ್ರ ನೋಂದಣಿ ರದ್ದುಗೊಳಿಸಬಹುದು.' },
+        { success: false, message: 'ಅರ್ಜಿಯನ್ನು ಅಳಿಸಲು ಮುಖ್ಯ ನಿರ್ವಾಹಕರಿಗೆ ಮಾತ್ರ ಅಧಿಕಾರವಿದೆ.' },
         { status: 403 }
       );
     }
@@ -180,30 +181,39 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Player ID ಅಗತ್ಯವಿದೆ.' }, { status: 400 });
     }
 
-    const player = await prisma.player.update({
+    const player = await prisma.player.findUnique({
       where: { id: playerId },
-      data: {
-        registrationStatus: 'cancelled',
-        paymentStatus: 'cancelled',
-        selectionStatus: 'not_selected',
-      },
+    });
+
+    if (!player) {
+      return NextResponse.json({ success: false, message: 'ಆಟಗಾರರ ದಾಖಲೆ ಕಂಡುಬಂದಿಲ್ಲ.' }, { status: 404 });
+    }
+
+    // Delete associated payments if any
+    await prisma.payment.deleteMany({
+      where: { playerId },
+    });
+
+    // Delete player permanently from database
+    await prisma.player.delete({
+      where: { id: playerId },
     });
 
     await logAdminActivity(
       session.id,
       session.username,
-      'CANCEL_PLAYER_REGISTRATION',
+      'DELETE_PLAYER_REGISTRATION',
       'PLAYER',
       playerId,
-      { playerCode: player.registrationCode }
+      { playerCode: player.registrationCode, fullName: player.fullName }
     );
 
     return NextResponse.json({
       success: true,
-      message: 'ಆಟಗಾರರ ನೋಂದಣಿಯನ್ನು ಯಶಸ್ವಿಯಾಗಿ ರದ್ದುಗೊಳಿಸಲಾಗಿದೆ.',
+      message: `${player.fullName} (${player.registrationCode}) ಅವರ ಅರ್ಜಿಯನ್ನು ಶಾಶ್ವತವಾಗಿ ಅಳಿಸಲಾಗಿದೆ.`,
     });
   } catch (error) {
-    console.error('Cancel registration error:', error);
-    return NextResponse.json({ success: false, message: 'ರದ್ದುಗೊಳಿಸುವಲ್ಲಿ ದೋಷ ಸಂಭವಿಸಿದೆ.' }, { status: 500 });
+    console.error('Delete player error:', error);
+    return NextResponse.json({ success: false, message: 'ಅರ್ಜಿಯನ್ನು ಅಳಿಸುವಲ್ಲಿ ತಾಂತ್ರಿಕ ದೋಷ ಸಂಭವಿಸಿದೆ.' }, { status: 500 });
   }
 }
