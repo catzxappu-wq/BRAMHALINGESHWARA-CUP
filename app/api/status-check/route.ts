@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { checkRateLimit } from '@/lib/rateLimit';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   try {
     const ip = req.headers.get('x-forwarded-for') || 'local';
-    const rateCheck = checkRateLimit(`status_check_${ip}`, 15, 60000);
+    const rateCheck = checkRateLimit(`status_check_${ip}`, 20, 60000);
 
     if (!rateCheck.allowed) {
       return NextResponse.json(
@@ -43,7 +45,7 @@ export async function POST(req: NextRequest) {
         registrationCode: true,
         fullName: true,
         playerCategory: true,
-        paymentStatus: true,
+        guidanceBy: true,
         selectionStatus: true,
         registrationStatus: true,
         createdAt: true,
@@ -67,14 +69,6 @@ export async function POST(req: NextRequest) {
       all_rounder: 'ಆಲ್ರೌಂಡರ್',
     };
 
-    const paymentLabels: Record<string, { text: string; color: string }> = {
-      pending: { text: 'ಪಾವತಿ ರಶೀದಿ ಪರಿಶೀಲನೆಯಲ್ಲಿದೆ', color: 'yellow' },
-      paid: { text: 'ಶುಲ್ಕ ಪಾವತಿ ದೃಢೀಕರಿಸಲಾಗಿದೆ', color: 'green' },
-      rejected: { text: 'ಪಾವತಿ ರಶೀದಿ ತಿರಸ್ಕರಿಸಲಾಗಿದೆ', color: 'red' },
-      failed: { text: 'ಪಾವತಿ ವಿಫಲವಾಗಿದೆ', color: 'red' },
-      cancelled: { text: 'ಪಾವತಿ ರದ್ದಾಗಿದೆ', color: 'gray' },
-    };
-
     const selectionLabels: Record<string, { text: string; color: string }> = {
       pending: { text: 'ಆಯ್ಕೆ ಬಾಕಿಯಿದೆ (ಪರಿಶೀಲನೆಯಲ್ಲಿದೆ)', color: 'blue' },
       approved: { text: 'ಆಯ್ಕೆಯಾಗಿದ್ದಾರೆ (Congratulations!)', color: 'green' },
@@ -82,8 +76,7 @@ export async function POST(req: NextRequest) {
     };
 
     const registrationLabels: Record<string, string> = {
-      pending_payment: 'ಪರಿಶೀಲನೆಯಲ್ಲಿದೆ',
-      completed: 'ನೋಂದಣಿ ಸ್ವೀಕರಿಸಲಾಗಿದೆ',
+      completed: 'ನೋಂದಣಿ ಸ್ವೀಕರಿಸಲಾಗಿದೆ (ಉಚಿತ)',
       cancelled: 'ನೋಂದಣಿ ರದ್ದಾಗಿದೆ',
     };
 
@@ -94,13 +87,11 @@ export async function POST(req: NextRequest) {
         fullName: player.fullName,
         category: player.playerCategory,
         categoryKannada: categoryLabels[player.playerCategory] || player.playerCategory,
-        paymentStatus: player.paymentStatus,
-        paymentStatusKannada: paymentLabels[player.paymentStatus]?.text || player.paymentStatus,
-        paymentStatusColor: paymentLabels[player.paymentStatus]?.color || 'gray',
+        guidanceBy: player.guidanceBy || '-',
         selectionStatus: player.selectionStatus,
         selectionStatusKannada: selectionLabels[player.selectionStatus]?.text || player.selectionStatus,
         selectionStatusColor: selectionLabels[player.selectionStatus]?.color || 'gray',
-        registrationStatusKannada: registrationLabels[player.registrationStatus] || player.registrationStatus,
+        registrationStatusKannada: registrationLabels[player.registrationStatus] || 'ನೋಂದಣಿ ಸ್ವೀಕರಿಸಲಾಗಿದೆ',
         registrationDate: player.createdAt,
       },
     });

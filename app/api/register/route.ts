@@ -3,7 +3,6 @@ import prisma from '@/lib/prisma';
 import { checkRegistrationCapacity } from '@/lib/capacity';
 import { generateUniqueRegistrationCode } from '@/lib/codeGenerator';
 import { uploadToCloud } from '@/lib/cloudStorage';
-import fs from 'fs';
 import path from 'path';
 
 export const dynamic = 'force-dynamic';
@@ -18,8 +17,6 @@ export async function POST(req: NextRequest) {
       playerCategory,
       photoStorageKey,
       guidanceBy,
-      paymentReceiptStorageKey,
-      transactionReference,
     } = body;
 
     // 1. Validations
@@ -69,14 +66,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Payment receipt validation
-    if (!paymentReceiptStorageKey) {
-      return NextResponse.json(
-        { success: false, message: 'ದಯವಿಟ್ಟು ಶುಲ್ಕ ಪಾವತಿಯ ರಶೀದಿ / ಸ್ಕ್ರೀನ್‌ಶಾಟ್ ಅನ್ನು ಅಪ್ಲೋಡ್ ಮಾಡಿ.' },
-        { status: 400 }
-      );
-    }
-
     // Upload photo to cloud storage if data URI or file
     let safePhotoKey = photoStorageKey;
     if (typeof photoStorageKey === 'string' && photoStorageKey.startsWith('data:')) {
@@ -86,16 +75,7 @@ export async function POST(req: NextRequest) {
       safePhotoKey = path.basename(photoStorageKey);
     }
 
-    // Upload payment receipt to cloud storage if data URI or file
-    let safeReceiptKey = paymentReceiptStorageKey;
-    if (typeof paymentReceiptStorageKey === 'string' && paymentReceiptStorageKey.startsWith('data:')) {
-      const cloudRes = await uploadToCloud(paymentReceiptStorageKey, 'receipts');
-      safeReceiptKey = cloudRes.url;
-    } else if (typeof paymentReceiptStorageKey === 'string' && !paymentReceiptStorageKey.startsWith('http')) {
-      safeReceiptKey = path.basename(paymentReceiptStorageKey);
-    }
-
-    // 2. Atomic Capacity Check
+    // 2. Capacity Check
     const capacity = await checkRegistrationCapacity();
     if (!capacity.canRegister) {
       return NextResponse.json(
@@ -125,7 +105,7 @@ export async function POST(req: NextRequest) {
     // 4. Generate Unique Registration Code atomically
     const registrationCode = await generateUniqueRegistrationCode();
 
-    // 5. Create player record with payment receipt and guidance details
+    // 5. Create player record (100% Free registration)
     const player = await prisma.player.create({
       data: {
         registrationCode,
@@ -135,9 +115,9 @@ export async function POST(req: NextRequest) {
         playerCategory,
         photoStorageKey: safePhotoKey,
         guidanceBy: guidanceBy.trim(),
-        paymentReceiptStorageKey: safeReceiptKey,
-        transactionReference: transactionReference ? String(transactionReference).trim() : null,
-        paymentStatus: 'pending', // Pending organizer verification
+        paymentReceiptStorageKey: null,
+        transactionReference: null,
+        paymentStatus: 'free',
         selectionStatus: 'pending',
         registrationStatus: 'completed',
       },
@@ -148,7 +128,7 @@ export async function POST(req: NextRequest) {
       playerId: player.id,
       registrationCode: player.registrationCode,
       fullName: player.fullName,
-      message: 'ನೋಂದಣಿ ಯಶಸ್ವಿಯಾಗಿ ಪೂರ್ಣಗೊಂಡಿದೆ! ನಿಮ್ಮ ಪಾವತಿ ರಶೀದಿಯನ್ನು ಸಮಿತಿಯು ಪರಿಶೀಲಿಸಲಿದೆ.',
+      message: 'ಆಟಗಾರರ ನೋಂದಣಿ ಯಶಸ್ವಿಯಾಗಿ ಪೂರ್ಣಗೊಂಡಿದೆ!',
     });
   } catch (error: any) {
     console.error('Registration error:', error);

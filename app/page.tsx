@@ -114,11 +114,11 @@ export default function HomePage() {
                 </div>
 
                 <div className="bg-[#0e2444]/80 p-3.5 rounded-xl border border-[#d4af37]/30 flex items-center gap-3">
-                  <Coins className="w-6 h-6 text-[#22c55e] shrink-0" />
+                  <Sparkles className="w-6 h-6 text-[#22c55e] shrink-0" />
                   <div className="text-left">
-                    <div className="text-xs text-gray-400">ನೋಂದಣಿ ಶುಲ್ಕ</div>
-                    <div className="text-sm font-bold text-white">
-                      ₹{data?.registrationFee ?? 250}/- ಮಾತ್ರ
+                    <div className="text-xs text-gray-400">ನೋಂದಣಿ (Registration)</div>
+                    <div className="text-sm font-bold text-emerald-400">
+                      ಉಚಿತ ಪ್ರವೇಶ (Free Entry)
                     </div>
                   </div>
                 </div>

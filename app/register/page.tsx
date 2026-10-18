@@ -2,31 +2,26 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import Link from 'next/link';
 import {
   User,
   Phone,
   MapPin,
   Camera,
-  Upload,
-  AlertCircle,
   CheckCircle,
-  Coins,
-  ShieldCheck,
-  RefreshCw,
+  AlertCircle,
   ArrowRight,
-  FileCheck2,
+  RefreshCw,
+  Sparkles,
   Users2,
-  QrCode,
-  Copy,
-  Check,
+  ShieldCheck,
+  Calendar,
 } from 'lucide-react';
 
 export default function RegisterPage() {
   const router = useRouter();
 
-  // Form states
+  // Form input states
   const [fullName, setFullName] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
   const [address, setAddress] = useState('');
@@ -39,15 +34,7 @@ export default function RegisterPage() {
   const [photoStorageKey, setPhotoStorageKey] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
-  // Payment receipt upload states
-  const [receiptFile, setReceiptFile] = useState<File | null>(null);
-  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
-  const [receiptStorageKey, setReceiptStorageKey] = useState<string | null>(null);
-  const [uploadingReceipt, setUploadingReceipt] = useState(false);
-  const [transactionReference, setTransactionReference] = useState('');
-
   // Tournament settings
-  const [fee, setFee] = useState<number>(250);
   const [canRegister, setCanRegister] = useState<boolean>(true);
   const [remainingSlots, setRemainingSlots] = useState<number>(100);
   const [closureReason, setClosureReason] = useState<string>('');
@@ -56,17 +43,14 @@ export default function RegisterPage() {
   // UI helpers
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [copiedUpi, setCopiedUpi] = useState(false);
 
   const photoInputRef = useRef<HTMLInputElement>(null);
-  const receiptInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch('/api/settings')
       .then((res) => res.json())
       .then((data) => {
         if (data.success && data.tournament) {
-          setFee(data.tournament.registrationFee);
           setCanRegister(data.tournament.canRegister);
           setRemainingSlots(data.tournament.remainingSlots);
           setClosureReason(data.tournament.reasonKannada || '');
@@ -113,13 +97,13 @@ export default function RegisterPage() {
     });
   };
 
-  // 1. Handle Player Photo Select
+  // Handle Player Photo Select
   const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      setErrorMessage('ಭಾವಚಿತ್ರದ ಗಾತ್ರವು 5 MB ಗಿಂತ ಕಡಿಮೆಯಿರಬೇಕು.');
+    if (file.size > 8 * 1024 * 1024) {
+      setErrorMessage('ಭಾವಚಿತ್ರದ ಗಾತ್ರವು 8 MB ಗಿಂತ ಕಡಿಮೆಯಿರಬೇಕು.');
       return;
     }
 
@@ -138,7 +122,7 @@ export default function RegisterPage() {
       setPhotoPreview(compressedUrl);
       setPhotoStorageKey(compressedUrl);
 
-      // Background server upload attempt to cloud
+      // Background cloud upload attempt
       const formData = new FormData();
       formData.append('photo', file);
       formData.append('folder', 'players');
@@ -157,57 +141,7 @@ export default function RegisterPage() {
     }
   };
 
-  // 2. Handle Payment Receipt Select
-  const handleReceiptSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 8 * 1024 * 1024) {
-      setErrorMessage('ರಶೀದಿಯ ಗಾತ್ರವು 8 MB ಗಿಂತ ಕಡಿಮೆಯಿರಬೇಕು.');
-      return;
-    }
-
-    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
-    if (!validTypes.includes(file.type)) {
-      setErrorMessage('ದಯವಿಟ್ಟು JPG, PNG ಅಥವಾ WEBP ಫಾರ್ಮ್ಯಾಟ್ ರಶೀದಿಯನ್ನು ಅಪ್ಲೋಡ್ ಮಾಡಿ.');
-      return;
-    }
-
-    setErrorMessage('');
-    setReceiptFile(file);
-    setUploadingReceipt(true);
-
-    try {
-      const compressedUrl = await compressImage(file);
-      setReceiptPreview(compressedUrl);
-      setReceiptStorageKey(compressedUrl);
-
-      // Background server upload attempt to cloud
-      const formData = new FormData();
-      formData.append('receipt', file);
-      formData.append('folder', 'receipts');
-      fetch('/api/upload', { method: 'POST', body: formData })
-        .then((r) => r.json())
-        .then((data) => {
-          if (data?.success && data?.photoStorageKey) {
-            setReceiptStorageKey(data.photoStorageKey);
-          }
-        })
-        .catch(() => {});
-    } catch (err) {
-      console.warn('Receipt processing:', err);
-    } finally {
-      setUploadingReceipt(false);
-    }
-  };
-
-  const handleCopyUpi = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedUpi(true);
-    setTimeout(() => setCopiedUpi(false), 2500);
-  };
-
-  // 3. Handle Form Submit
+  // Handle Form Submit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
@@ -224,21 +158,22 @@ export default function RegisterPage() {
       return;
     }
 
-    const cleanMobile = mobileNumber.trim().replace(/\D/g, '');
-    if (!/^[6-9]\d{9}$/.test(cleanMobile)) {
-      setErrorMessage('ದಯವಿಟ್ಟು ಸರಿಯಾದ 10 ಅಂಕಿಗಳ ಭಾರತೀಯ ಮೊಬೈಲ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ (ಉದಾ: 9876543210).');
+    const cleanMobile = mobileNumber.replace(/\D/g, '');
+    const mobileRegex = /^[6-9]\d{9}$/;
+    if (!mobileRegex.test(cleanMobile)) {
+      setErrorMessage('ದಯವಿಟ್ಟು ಮಾನ್ಯವಾದ 10 ಅಂಕಿಗಳ ಮೊಬೈಲ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ (6, 7, 8 ಅಥವಾ 9 ರಿಂದ ಪ್ರಾರಂಭವಾಗಬೇಕು).');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
     if (!address.trim() || address.trim().length < 5) {
-      setErrorMessage('ದಯವಿಟ್ಟು ಪೂರ್ಣ ವಿಳಾಸವನ್ನು ನಮೂದಿಸಿ (ಕನಿಷ್ಠ 5 ಅಕ್ಷರಗಳು).');
+      setErrorMessage('ದಯವಿಟ್ಟು ನಿಮ್ಮ ಪೂರ್ಣ ವಿಳಾಸವನ್ನು ನಮೂದಿಸಿ (ಕನಿಷ್ಠ 5 ಅಕ್ಷರಗಳು).');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
     if (!photoStorageKey) {
-      setErrorMessage('ದಯವಿಟ್ಟು ನಿಮ್ಮ ಭಾವಚಿತ್ರವನ್ನು ಅಪ್ಲೋಡ್ ಮಾಡಿ.');
+      setErrorMessage('ದಯವಿಟ್ಟು ನಿಮ್ಮ ಭಾವಚಿತ್ರವನ್ನು (Photo) ಅಪ್ಲೋಡ್ ಮಾಡಿ.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -246,11 +181,6 @@ export default function RegisterPage() {
     if (!guidanceBy.trim() || guidanceBy.trim().length < 2) {
       setErrorMessage('ದಯವಿಟ್ಟು ಯಾರ ಮಾರ್ಗದರ್ಶನದಲ್ಲಿ ಈ ಫಾರ್ಮ್ ತುಂಬುತ್ತಿದ್ದೀರಿ ಎಂದು ನಮೂದಿಸಿ.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-
-    if (!receiptStorageKey) {
-      setErrorMessage('ದಯವಿಟ್ಟು ಶುಲ್ಕ ಪಾವತಿಯ ರಶೀದಿ / ಸ್ಕ್ರೀನ್‌ಶಾಟ್ ಅನ್ನು ಅಪ್ಲೋಡ್ ಮಾಡಿ.');
       return;
     }
 
@@ -267,8 +197,6 @@ export default function RegisterPage() {
           playerCategory,
           photoStorageKey,
           guidanceBy: guidanceBy.trim(),
-          paymentReceiptStorageKey: receiptStorageKey,
-          transactionReference: transactionReference.trim(),
         }),
       });
 
@@ -301,50 +229,64 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0a1b33] via-[#081526] to-[#06101e] py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-b from-[#0a1b33] via-[#081526] to-[#06101e] py-10 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#132d54] border border-[#d4af37]/40 text-[#fbbf24] text-xs font-bold mb-3 shadow-md">
-            <span>ಸೀಸನ್ - 01</span>
-            <span>•</span>
-            <span>ಗೆಣಸಿನಕುಣಿ</span>
-          </div>
-          <h1 className="text-2xl sm:text-4xl font-black text-white tracking-wide">
-            ಆಟಗಾರರ ನೋಂದಣಿ (Player Registration)
-          </h1>
-          <p className="text-sm text-[#d4af37] font-semibold mt-2">
-            ಶ್ರೀ ಬ್ರಹ್ಮಲಿಂಗೇಶ್ವರ ಕಪ್ ಕ್ರಿಕೆಟ್ ಪಂದ್ಯಾವಳಿ - 2026
-          </p>
+        {/* Breadcrumb / Back Link */}
+        <div className="mb-6 flex items-center justify-between">
+          <Link
+            href="/"
+            className="text-xs font-bold text-[#fbbf24] hover:text-[#f59e0b] transition-colors flex items-center gap-1.5"
+          >
+            ← ಮುಖಪುಟಕ್ಕೆ ಹಿಂತಿರುಗಿ (Home)
+          </Link>
+          <span className="text-xs text-gray-400">ಶ್ರೀ ಬ್ರಹ್ಮಲಿಂಗೇಶ್ವರ ಕಪ್ 2026</span>
         </div>
 
-        {/* Capacity Closed Alert */}
-        {!canRegister && (
-          <div className="mb-6 p-5 rounded-2xl bg-red-950/80 border-2 border-red-500 flex items-start gap-3 shadow-lg">
-            <AlertCircle className="w-6 h-6 text-red-400 shrink-0 mt-0.5" />
-            <div>
-              <div className="text-base font-bold text-red-200">
-                ನೋಂದಣಿ ಪ್ರಸ್ತುತ ಲಭ್ಯವಿಲ್ಲ
-              </div>
-              <p className="text-sm text-red-300 mt-1">
-                {closureReason || 'ಗರಿಷ್ಠ ನೋಂದಣಿ ಮಿತಿ ತಲುಪಿರುವುದರಿಂದ ಹೊಸ ನೋಂದಣಿಗಳನ್ನು ಸ್ವೀಕರಿಸಲಾಗುವುದಿಲ್ಲ.'}
-              </p>
+        {/* Card Container */}
+        <div className="bg-[#0a192f] rounded-3xl border-2 border-[#d4af37] p-6 sm:p-10 shadow-gold relative overflow-hidden">
+          {/* Header */}
+          <div className="text-center mb-8 border-b border-gray-700/80 pb-6">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 text-xs font-bold mb-3">
+              <Sparkles className="w-4 h-4 text-[#fbbf24]" />
+              <span>ಉಚಿತ ಆಟಗಾರರ ನೋಂದಣಿ (Free Player Registration)</span>
+            </div>
+
+            <h1 className="text-2xl sm:text-3xl font-black text-white">
+              ಆಟಗಾರರ ನೋಂದಣಿ ನಮೂನೆ
+            </h1>
+            <p className="text-sm text-[#fbbf24] font-medium mt-1">
+              ಶ್ರೀ ಬ್ರಹ್ಮಲಿಂಗೇಶ್ವರ ಕಪ್ - 2026 ಕ್ರಿಕೆಟ್ ಪಂದ್ಯಾವಳಿ | ಗೆಣಸಿನಕುಣಿ
+            </p>
+
+            <div className="flex flex-wrap items-center justify-center gap-4 mt-4 text-xs text-gray-300">
+              <span className="flex items-center gap-1.5 bg-[#0e2444] px-3 py-1.5 rounded-lg border border-gray-700">
+                <Calendar className="w-4 h-4 text-[#fbbf24]" />
+                <span>20, 21, 22 ನವೆಂಬರ್ 2026</span>
+              </span>
+              <span className="flex items-center gap-1.5 bg-[#0e2444] px-3 py-1.5 rounded-lg border border-gray-700">
+                <MapPin className="w-4 h-4 text-[#ef4444]" />
+                <span>ಗೆಣಸಿನಕುಣಿ</span>
+              </span>
+              {remainingSlots !== undefined && (
+                <span className="flex items-center gap-1.5 bg-emerald-950 px-3 py-1.5 rounded-lg border border-emerald-500/40 text-emerald-300 font-bold">
+                  <span>ಲಭ್ಯವಿರುವ ಸ್ಥಾನಗಳು: {remainingSlots}</span>
+                </span>
+              )}
             </div>
           </div>
-        )}
 
-        {/* Registration Card */}
-        <div className="bg-[#0a192f] rounded-2xl border-2 border-[#d4af37]/40 p-6 sm:p-10 shadow-2xl relative overflow-hidden">
-          {/* Gold banner strip */}
-          <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#b91c1c] via-[#fbbf24] to-[#15803d]" />
-
-          {errorMessage && (
-            <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/50 flex items-start gap-3 text-red-300 text-sm">
+          {/* Registration Closed Warning */}
+          {!canRegister && (
+            <div className="mb-6 p-4 rounded-2xl bg-red-950/90 border-2 border-red-500 text-red-200 text-sm flex items-start gap-3 shadow-lg">
               <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
-              <span>{errorMessage}</span>
+              <div>
+                <div className="font-bold text-base text-red-100 mb-1">ನೋಂದಣಿ ಮುಕ್ತಾಯಗೊಂಡಿದೆ!</div>
+                <p>{closureReason || 'ಕ್ಷಮಿಸಿ, ಪ್ರಸ್ತುತ ನೋಂದಣಿ ಪ್ರಕ್ರಿಯೆಯನ್ನು ಮುಕ್ತಾಯಗೊಳಿಸಲಾಗಿದೆ.'}</p>
+              </div>
             </div>
           )}
 
+          {/* Registration Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Field 1: Full Name */}
             <div>
@@ -376,6 +318,9 @@ export default function RegisterPage() {
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
                   <Phone className="w-5 h-5 text-[#fbbf24]" />
                 </div>
+                <span className="absolute inset-y-0 left-10 flex items-center text-gray-400 text-sm font-semibold pl-1">
+                  +91
+                </span>
                 <input
                   type="tel"
                   required
@@ -384,12 +329,9 @@ export default function RegisterPage() {
                   value={mobileNumber}
                   onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, ''))}
                   placeholder="10 ಅಂಕಿಗಳ ಮೊಬೈಲ್ ಸಂಖ್ಯೆ"
-                  className="w-full pl-11 pr-4 py-3 bg-[#0e2444] border border-gray-700 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-[#fbbf24] focus:ring-1 focus:ring-[#fbbf24] transition-colors"
+                  className="w-full pl-20 pr-4 py-3 bg-[#0e2444] border border-gray-700 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-[#fbbf24] focus:ring-1 focus:ring-[#fbbf24] transition-colors font-mono"
                 />
               </div>
-              <p className="text-xs text-gray-400 mt-1">
-                * ಪಂದ್ಯಾವಳಿ ಸಂದೇಶಗಳು ಮತ್ತು ಆಯ್ಕೆ ಮಾಹಿತಿಯನ್ನು ಇದೇ ಸಂಖ್ಯೆಗೆ ಕಳುಹಿಸಲಾಗುತ್ತದೆ.
-              </p>
             </div>
 
             {/* Field 3: Full Address */}
@@ -398,7 +340,7 @@ export default function RegisterPage() {
                 ೩. ಪೂರ್ಣ ವಿಳಾಸ (Full Address) <span className="text-red-400">*</span>
               </label>
               <div className="relative">
-                <div className="absolute top-3.5 left-3.5 pointer-events-none text-gray-400">
+                <div className="absolute top-3 left-3.5 pointer-events-none text-gray-400">
                   <MapPin className="w-5 h-5 text-[#fbbf24]" />
                 </div>
                 <textarea
@@ -407,8 +349,8 @@ export default function RegisterPage() {
                   disabled={!canRegister || submitting}
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  placeholder="ನಿಮ್ಮ ಊರು / ಗ್ರಾಮ, ತಾಲೂಕು ಮತ್ತು ಪಿನ್‌ಕೋಡ್"
-                  className="w-full pl-11 pr-4 py-3 bg-[#0e2444] border border-gray-700 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-[#fbbf24] focus:ring-1 focus:ring-[#fbbf24] transition-colors"
+                  placeholder="ಊರು, ಗ್ರಾಮ, ತಾಲೂಕು, ಪಿನ್‌ಕೋಡ್ ನಮೂದಿಸಿ"
+                  className="w-full pl-11 pr-4 py-3 bg-[#0e2444] border border-gray-700 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-[#fbbf24] focus:ring-1 focus:ring-[#fbbf24] transition-colors resize-none"
                 />
               </div>
             </div>
@@ -420,29 +362,29 @@ export default function RegisterPage() {
               </label>
               <div className="grid grid-cols-3 gap-3">
                 {[
-                  { key: 'batsman', labelKannada: 'ಬ್ಯಾಟ್ಸ್‌ಮನ್', labelEnglish: 'Batsman' },
-                  { key: 'bowler', labelKannada: 'ಬೌಲರ್', labelEnglish: 'Bowler' },
-                  { key: 'all_rounder', labelKannada: 'ಆಲ್‌ರೌಂಡರ್', labelEnglish: 'All-Rounder' },
+                  { value: 'batsman', label: 'ಬ್ಯಾಟ್ಸ್‌ಮನ್', sub: 'Batsman' },
+                  { value: 'bowler', label: 'ಬೌಲರ್', sub: 'Bowler' },
+                  { value: 'all_rounder', label: 'ಆಲ್‌ರೌಂಡರ್', sub: 'All-Rounder' },
                 ].map((cat) => (
                   <button
-                    key={cat.key}
+                    key={cat.value}
                     type="button"
                     disabled={!canRegister || submitting}
-                    onClick={() => setPlayerCategory(cat.key)}
-                    className={`py-3 px-2 rounded-xl border text-center transition-all ${
-                      playerCategory === cat.key
-                        ? 'bg-[#b91c1c] border-[#fbbf24] text-white shadow-md font-bold'
-                        : 'bg-[#0e2444] border-gray-700 text-gray-300 hover:border-gray-500'
+                    onClick={() => setPlayerCategory(cat.value)}
+                    className={`py-3 px-2 rounded-xl border-2 text-center transition-all ${
+                      playerCategory === cat.value
+                        ? 'border-[#fbbf24] bg-[#132d54] text-white shadow-md'
+                        : 'border-gray-700 bg-[#0e2444]/60 text-gray-400 hover:border-gray-600'
                     }`}
                   >
-                    <div className="text-sm font-bold">{cat.labelKannada}</div>
-                    <div className="text-[11px] opacity-75">{cat.labelEnglish}</div>
+                    <div className="text-xs sm:text-sm font-extrabold">{cat.label}</div>
+                    <div className="text-[10px] text-gray-400 mt-0.5">{cat.sub}</div>
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Field 5: Player Photo Upload */}
+            {/* Field 5: Player Photograph Upload */}
             <div>
               <label className="block text-sm font-bold text-gray-200 mb-2">
                 ೫. ಆಟಗಾರರ ಭಾವಚಿತ್ರ (Player Photograph) <span className="text-red-400">*</span>
@@ -504,14 +446,14 @@ export default function RegisterPage() {
                       ಇಲ್ಲಿ ಕ್ಲಿಕ್ ಮಾಡಿ ಭಾವಚಿತ್ರ ಅಪ್ಲೋಡ್ ಮಾಡಿ
                     </div>
                     <div className="text-xs text-gray-400">
-                      ಫೋನ್ ಗ್ಯಾಲರಿ ಅಥವಾ ಕ್ಯಾಮರಾ ಮೂಲಕ JPG, PNG, WEBP (ಗರಿಷ್ಠ 5 MB)
+                      ಫೋನ್ ಗ್ಯಾಲರಿ ಅಥವಾ ಕ್ಯಾಮರಾ ಮೂಲಕ JPG, PNG, WEBP (ಗರಿಷ್ಠ 8 MB)
                     </div>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Field 6: Guidance Section (NEW REQUEST) */}
+            {/* Field 6: Guidance Section */}
             <div>
               <label className="block text-sm font-bold text-gray-200 mb-1">
                 ೬. ಯಾರ ಮಾರ್ಗದರ್ಶನದಲ್ಲಿ ಈ ಫಾರ್ಮ್ ತುಂಬುತ್ತಿದ್ದೀರಿ? (Under whose guidance are you filling this form?) <span className="text-red-400">*</span>
@@ -535,150 +477,6 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            {/* Field 7: Registration Fee & UPI Payment Instructions (NEW REQUEST) */}
-            <div className="bg-[#0b1c36] p-5 rounded-2xl border-2 border-[#d4af37]/60 shadow-lg space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-gray-700/80">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[#fbbf24]/10 border border-[#fbbf24]/40 flex items-center justify-center">
-                    <Coins className="w-5 h-5 text-[#fbbf24]" />
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-400 font-semibold">೭. ನೋಂದಣಿ ಶುಲ್ಕ (Registration Fee)</div>
-                    <div className="text-xl font-black text-[#fbbf24]">₹{fee}/- ಮಾತ್ರ</div>
-                  </div>
-                </div>
-                <span className="text-xs bg-emerald-950 text-emerald-400 border border-emerald-500/40 px-3 py-1 rounded-full font-bold">
-                  UPI / QR ಪಾವತಿ
-                </span>
-              </div>
-
-              {/* Organizers UPI numbers */}
-              <div className="space-y-2 text-xs">
-                <div className="font-bold text-white flex items-center gap-1.5">
-                  <Phone className="w-4 h-4 text-[#fbbf24]" />
-                  <span>ಶುಲ್ಕ ಪಾವತಿಸಲು PhonePe / Google Pay / Paytm ಸಂಖ್ಯೆಗಳು:</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-                  <div className="bg-[#061224] p-3 rounded-xl border border-gray-700/80 flex items-center justify-between">
-                    <div>
-                      <div className="text-gray-400 font-medium">ತೀರ್ಥೇಶ್‌</div>
-                      <div className="font-mono font-bold text-white text-sm">9632520611</div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleCopyUpi('9632520611')}
-                      className="px-2.5 py-1 rounded-lg bg-[#132d54] hover:bg-[#1a3a6b] text-[#fbbf24] text-[11px] font-bold border border-gray-600"
-                    >
-                      {copiedUpi ? 'ಕಾಪಿಯಾಗಿದೆ' : 'ಕಾಪಿ'}
-                    </button>
-                  </div>
-
-                  <div className="bg-[#061224] p-3 rounded-xl border border-gray-700/80 flex items-center justify-between">
-                    <div>
-                      <div className="text-gray-400 font-medium">ಪ್ರಜ್ವಲ್ PK</div>
-                      <div className="font-mono font-bold text-white text-sm">9606467726</div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleCopyUpi('9606467726')}
-                      className="px-2.5 py-1 rounded-lg bg-[#132d54] hover:bg-[#1a3a6b] text-[#fbbf24] text-[11px] font-bold border border-gray-600"
-                    >
-                      {copiedUpi ? 'ಕಾಪಿಯಾಗಿದೆ' : 'ಕಾಪಿ'}
-                    </button>
-                  </div>
-                </div>
-
-                <p className="text-[11px] text-amber-200/90 pt-1">
-                  * ಮೇಲಿನ ಯಾವುದಾದರೂ ಸಂಖ್ಯೆಗೆ Google Pay, PhonePe ಅಥವಾ Paytm ಮೂಲಕ ₹{fee}/- ಪಾವತಿಸಿ, ಯಶಸ್ವಿ ಪಾವತಿಯ ಸ್ಕ್ರೀನ್‌ಶಾಟ್ ಅನ್ನು ಕೆಳಗೆ ಅಪ್ಲೋಡ್ ಮಾಡಿ.
-                </p>
-              </div>
-            </div>
-
-            {/* Field 8: Payment Receipt Upload (NEW REQUEST) */}
-            <div>
-              <label className="block text-sm font-bold text-gray-200 mb-2">
-                ೮. ಶುಲ್ಕ ಪಾವತಿಯ ರಸೀದಿ / ಸ್ಕ್ರೀನ್‌ಶಾಟ್ (Payment Receipt / Screenshot) <span className="text-red-400">*</span>
-              </label>
-
-              <input
-                ref={receiptInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                disabled={!canRegister || submitting}
-                onChange={handleReceiptSelect}
-                className="hidden"
-              />
-
-              <div
-                onClick={() => !receiptPreview && receiptInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all ${
-                  receiptPreview
-                    ? 'border-[#22c55e] bg-[#0c281a]/50'
-                    : 'border-[#fbbf24]/60 hover:border-[#fbbf24] bg-[#0e2444]/60 cursor-pointer'
-                }`}
-              >
-                {receiptPreview ? (
-                  <div className="flex flex-col items-center">
-                    <div className="relative w-36 h-48 rounded-xl overflow-hidden border-2 border-emerald-400 shadow-md mb-3">
-                      <img
-                        src={receiptPreview}
-                        alt="Payment receipt preview"
-                        className="w-full h-full object-contain bg-black/60"
-                      />
-                    </div>
-                    {uploadingReceipt ? (
-                      <div className="flex items-center gap-2 text-sm text-[#fbbf24]">
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span>ರಶೀದಿ ಸಿದ್ಧವಾಗುತ್ತಿದೆ...</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 text-sm text-emerald-400 font-semibold mb-2">
-                        <CheckCircle className="w-4 h-4" />
-                        <span>ಪಾವತಿ ರಶೀದಿ ಯಶಸ್ವಿಯಾಗಿ ಲಗತ್ತಿಸಲಾಗಿದೆ</span>
-                      </div>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={() => receiptInputRef.current?.click()}
-                      disabled={uploadingReceipt || submitting}
-                      className="px-4 py-1.5 text-xs font-semibold bg-[#132d54] hover:bg-[#1a3a6b] text-gray-200 rounded-lg border border-gray-600 transition-colors"
-                    >
-                      ರಶೀದಿ ಬದಲಾಯಿಸಿ (Change Receipt)
-                    </button>
-                  </div>
-                ) : (
-                  <div>
-                    <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-emerald-950/80 border border-emerald-500/50 flex items-center justify-center text-emerald-400">
-                      <FileCheck2 className="w-6 h-6" />
-                    </div>
-                    <div className="text-sm font-bold text-white mb-1">
-                      ಇಲ್ಲಿ ಕ್ಲಿಕ್ ಮಾಡಿ ಪಾವತಿಯ ರಸೀದಿ / ಸ್ಕ್ರೀನ್‌ಶಾಟ್ ಅಪ್ಲೋಡ್ ಮಾಡಿ
-                    </div>
-                    <div className="text-xs text-gray-400">
-                      PhonePe / GPay / Paytm ಯಶಸ್ವಿ ಪಾವತಿಯ ಸ್ಕ್ರೀನ್‌ಶಾಟ್ (JPG, PNG, WEBP)
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Field 9: Optional Transaction / UTR Number */}
-            <div>
-              <label className="block text-sm font-bold text-gray-200 mb-1.5">
-                ೯. UPI / UTR ವಹಿವಾಟು ಸಂಖ್ಯೆ (Transaction ID / UTR No. - ಐಚ್ಛಿಕ)
-              </label>
-              <input
-                type="text"
-                disabled={!canRegister || submitting}
-                value={transactionReference}
-                onChange={(e) => setTransactionReference(e.target.value)}
-                placeholder="ಉದಾ: 12 ಅಂಕಿಗಳ UTR ಸಂಖ್ಯೆ (ಲಭ್ಯವಿದ್ದರೆ)"
-                className="w-full px-4 py-3 bg-[#0e2444] border border-gray-700 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-[#fbbf24] focus:ring-1 focus:ring-[#fbbf24] transition-colors text-sm font-mono"
-              />
-            </div>
-
             {/* Inline Error Banner above Submit */}
             {errorMessage && (
               <div className="p-4 rounded-xl bg-red-950/90 border-2 border-red-500 flex items-start gap-3 text-red-200 text-sm shadow-lg">
@@ -693,9 +491,9 @@ export default function RegisterPage() {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={!canRegister || submitting || uploadingPhoto || uploadingReceipt}
+              disabled={!canRegister || submitting || uploadingPhoto}
               className={`w-full py-4 px-6 rounded-xl text-base font-extrabold flex items-center justify-center gap-2 shadow-gold transition-all transform hover:-translate-y-0.5 ${
-                canRegister && !submitting && !uploadingPhoto && !uploadingReceipt
+                canRegister && !submitting && !uploadingPhoto
                   ? 'bg-gradient-to-r from-[#fbbf24] via-[#f59e0b] to-[#d4af37] text-gray-950 hover:brightness-110 cursor-pointer'
                   : 'bg-gray-700 text-gray-400 cursor-not-allowed'
               }`}
@@ -707,7 +505,7 @@ export default function RegisterPage() {
                 </>
               ) : (
                 <>
-                  <span>ನೋಂದಣಿ ಪೂರ್ಣಗೊಳಿಸಿ (Submit Registration)</span>
+                  <span>ಉಚಿತ ನೋಂದಣಿ ಪೂರ್ಣಗೊಳಿಸಿ (Submit Registration)</span>
                   <ArrowRight className="w-5 h-5" />
                 </>
               )}
@@ -717,7 +515,7 @@ export default function RegisterPage() {
           {/* Privacy Note */}
           <div className="mt-6 pt-4 border-t border-gray-800 text-center text-xs text-gray-400 flex items-center justify-center gap-1.5">
             <ShieldCheck className="w-4 h-4 text-[#fbbf24]" />
-            <span>ನಿಮ್ಮ ವಿವರಗಳು ಮತ್ತು ರಸೀದಿ ಸಮಿತಿಯ ಪರಿಶೀಲನೆಗೆ ಸುರಕ್ಷಿತವಾಗಿ ದಾಖಲಾಗುತ್ತದೆ.</span>
+            <span>ನಿಮ್ಮ ವಿವರಗಳು ಪಂದ್ಯಾವಳಿ ಸಮಿತಿಯ ಪರಿಶೀಲನೆಗೆ ಸುರಕ್ಷಿತವಾಗಿ ದಾಖಲಾಗುತ್ತದೆ.</span>
           </div>
         </div>
       </div>

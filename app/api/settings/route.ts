@@ -37,7 +37,7 @@ export async function GET() {
         contactName2: settings?.contactName2 || "ಪ್ರಜ್ವಲ್ PK",
         contactNumber2: settings?.contactNumber2 || "9606467726",
         rules,
-        registrationFee: settings?.registrationFee ?? 250,
+        registrationFee: 0,
         registrationOpen: settings?.registrationOpen ?? true,
         registrationCapacity: settings?.registrationCapacity ?? 100,
         registrationDeadline: settings?.registrationDeadline,
@@ -45,7 +45,6 @@ export async function GET() {
         remainingSlots: capacity.remainingSlots,
         totalRegistered: capacity.totalRegistered,
         reasonKannada: capacity.reasonKannada,
-        isPaymentGatewayConfigured: isRazorpayConfigured(),
       },
     }, {
       headers: {

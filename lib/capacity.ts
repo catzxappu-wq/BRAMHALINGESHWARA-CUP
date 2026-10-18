@@ -62,14 +62,9 @@ export async function checkRegistrationCapacity(
     };
   }
 
-  // 3. Count according to configured rule
-  const countWhere: Prisma.PlayerWhereInput =
-    settings.capacityCountingRule === 'paid'
-      ? { paymentStatus: 'paid' }
-      : { registrationStatus: 'completed' };
-
+  // 3. Count total registered players
   const currentCount = await db.player.count({
-    where: countWhere,
+    where: { registrationStatus: 'completed' },
   });
 
   const remainingSlots = Math.max(0, settings.registrationCapacity - currentCount);

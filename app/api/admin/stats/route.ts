@@ -14,25 +14,22 @@ export async function GET() {
 
     const [
       totalRegistrations,
-      paidPlayers,
-      pendingPayment,
       selectionPending,
       approvedPlayers,
       notSelectedPlayers,
-      totalPaymentsAmount,
+      batsmen,
+      bowlers,
+      allRounders,
       settings,
       capacity,
     ] = await Promise.all([
       prisma.player.count(),
-      prisma.player.count({ where: { paymentStatus: 'paid' } }),
-      prisma.player.count({ where: { paymentStatus: 'pending' } }),
-      prisma.player.count({ where: { selectionStatus: 'pending', paymentStatus: 'paid' } }),
+      prisma.player.count({ where: { selectionStatus: 'pending' } }),
       prisma.player.count({ where: { selectionStatus: 'approved' } }),
       prisma.player.count({ where: { selectionStatus: 'not_selected' } }),
-      prisma.payment.aggregate({
-        where: { paymentStatus: 'captured' },
-        _sum: { amount: true },
-      }),
+      prisma.player.count({ where: { playerCategory: 'batsman' } }),
+      prisma.player.count({ where: { playerCategory: 'bowler' } }),
+      prisma.player.count({ where: { playerCategory: 'all_rounder' } }),
       prisma.tournamentSetting.findUnique({ where: { id: 1 } }),
       checkRegistrationCapacity(),
     ]);
@@ -41,16 +38,15 @@ export async function GET() {
       success: true,
       stats: {
         totalRegistrations,
-        paidPlayers,
-        pendingPayment,
         selectionPending,
         approvedPlayers,
         notSelectedPlayers,
-        totalCollectedAmount: totalPaymentsAmount._sum.amount || 0,
+        batsmen,
+        bowlers,
+        allRounders,
         registrationCapacity: settings?.registrationCapacity || 100,
         availableSlots: capacity.remainingSlots,
         registrationOpen: settings?.registrationOpen ?? true,
-        registrationFee: settings?.registrationFee ?? 250,
       },
     });
   } catch (error) {

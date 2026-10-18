@@ -18,26 +18,12 @@ export async function GET() {
 
     const players = await prisma.player.findMany({
       orderBy: { createdAt: 'desc' },
-      include: {
-        payments: {
-          where: { paymentStatus: 'captured' },
-          take: 1,
-        },
-      },
     });
 
     const categoryKannada: Record<string, string> = {
       batsman: 'ಬ್ಯಾಟ್ಸ್ಮನ್',
       bowler: 'ಬೌಲರ್',
       all_rounder: 'ಆಲ್ರೌಂಡರ್',
-    };
-
-    const paymentKannada: Record<string, string> = {
-      paid: 'ಪಾವತಿ ದೃಢೀಕರಿಸಲಾಗಿದೆ',
-      pending: 'ಪಾವತಿ ರಶೀದಿ ಪರಿಶೀಲನೆಯಲ್ಲಿದೆ',
-      rejected: 'ಪಾವತಿ ರಶೀದಿ ತಿರಸ್ಕರಿಸಲಾಗಿದೆ',
-      failed: 'ವಿಫಲ',
-      cancelled: 'ರದ್ದು',
     };
 
     const selectionKannada: Record<string, string> = {
@@ -52,8 +38,6 @@ export async function GET() {
       'ಮೊಬೈಲ್ ಸಂಖ್ಯೆ',
       'ಆಟಗಾರರ ವಿಭಾಗ',
       'ಯಾರ ಮಾರ್ಗದರ್ಶನ',
-      'ಪಾವತಿ ಸ್ಥಿತಿ',
-      'UTR / ವಹಿವಾಟು ಸಂಖ್ಯೆ',
       'ಆಯ್ಕೆ ಸ್ಥಿತಿ',
       'ವಿಳಾಸ',
       'ನೋಂದಣಿ ದಿನಾಂಕ',
@@ -71,8 +55,6 @@ export async function GET() {
         escapeCsv(p.mobileNumber),
         escapeCsv(categoryKannada[p.playerCategory] || p.playerCategory),
         escapeCsv(p.guidanceBy || '-'),
-        escapeCsv(paymentKannada[p.paymentStatus] || p.paymentStatus),
-        escapeCsv(p.transactionReference || '-'),
         escapeCsv(selectionKannada[p.selectionStatus] || p.selectionStatus),
         escapeCsv(p.address),
         escapeCsv(new Date(p.createdAt).toLocaleString('kn-IN')),

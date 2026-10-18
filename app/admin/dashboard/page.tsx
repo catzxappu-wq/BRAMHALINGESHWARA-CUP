@@ -7,7 +7,6 @@ import Link from 'next/link';
 import {
   Trophy,
   Users,
-  CreditCard,
   Settings,
   Shield,
   FileText,
@@ -19,7 +18,6 @@ import {
   XCircle,
   Clock,
   Eye,
-  KeyRound,
   RefreshCw,
   PlusCircle,
   AlertCircle,
@@ -29,11 +27,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Sliders,
-  DollarSign,
   UserCheck,
   UserX,
   X,
-  FileCheck2,
+  Sparkles,
 } from 'lucide-react';
 
 export default function AdminDashboardPage() {
@@ -43,7 +40,7 @@ export default function AdminDashboardPage() {
   const [session, setSession] = useState<any>(null);
   const [loadingSession, setLoadingSession] = useState(true);
 
-  // Active Tab: 'overview' | 'players' | 'payments' | 'settings' | 'admins' | 'logs'
+  // Active Tab: 'overview' | 'players' | 'settings' | 'admins' | 'logs'
   const [activeTab, setActiveTab] = useState('overview');
 
   // Dashboard Stats
@@ -56,7 +53,6 @@ export default function AdminDashboardPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
-  const [paymentFilter, setPaymentFilter] = useState('');
   const [selectionFilter, setSelectionFilter] = useState('');
   const [loadingPlayers, setLoadingPlayers] = useState(false);
 
@@ -64,23 +60,12 @@ export default function AdminDashboardPage() {
   const [previewPhotoUrl, setPreviewPhotoUrl] = useState<string | null>(null);
   const [previewPlayerName, setPreviewPlayerName] = useState<string>('');
 
-  // Payment Receipt Preview Modal
-  const [previewReceiptUrl, setPreviewReceiptUrl] = useState<string | null>(null);
-  const [previewReceiptPlayerName, setPreviewReceiptPlayerName] = useState<string>('');
-  const [previewReceiptPlayerId, setPreviewReceiptPlayerId] = useState<string | null>(null);
-
-  // Payments Ledger
-  const [payments, setPayments] = useState<any[]>([]);
-  const [loadingPayments, setLoadingPayments] = useState(false);
-
   // Settings State (Supervisor)
   const [settingsForm, setSettingsForm] = useState<any>({
     tournamentName: '',
     season: '',
-    registrationFee: 250,
     registrationCapacity: 100,
     registrationOpen: true,
-    capacityCountingRule: 'paid',
     registrationDeadline: '',
     tournamentDates: '',
     tournamentVenue: '',
@@ -90,6 +75,7 @@ export default function AdminDashboardPage() {
     contactNumber1: '',
     contactName2: '',
     contactNumber2: '',
+    rules: '',
   });
   const [savingSettings, setSavingSettings] = useState(false);
 
@@ -99,7 +85,6 @@ export default function AdminDashboardPage() {
   const [newAdminPassword, setNewAdminPassword] = useState('');
   const [newAdminPermissions, setNewAdminPermissions] = useState<string[]>([
     'view_players',
-    'view_payments',
   ]);
   const [creatingAdmin, setCreatingAdmin] = useState(false);
 
@@ -144,6 +129,7 @@ export default function AdminDashboardPage() {
           setStats(data.stats);
         }
       })
+      .catch((err) => console.error(err))
       .finally(() => setLoadingStats(false));
   };
 
@@ -155,7 +141,6 @@ export default function AdminDashboardPage() {
       limit: '15',
       search,
       category: categoryFilter,
-      paymentStatus: paymentFilter,
       selectionStatus: selectionFilter,
     });
 
@@ -167,85 +152,74 @@ export default function AdminDashboardPage() {
           setTotalPlayers(data.total);
         }
       })
+      .catch((err) => console.error(err))
       .finally(() => setLoadingPlayers(false));
   };
 
-  // 4. Fetch Payments
-  const loadPayments = () => {
-    setLoadingPayments(true);
-    fetch('/api/admin/payments')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) {
-          setPayments(data.payments);
-        }
-      })
-      .finally(() => setLoadingPayments(false));
-  };
-
-  // 5. Fetch Settings
+  // 4. Fetch Settings
   const loadSettings = () => {
     fetch('/api/admin/settings')
       .then((res) => res.json())
       .then((data) => {
         if (data.success && data.settings) {
-          const s = data.settings;
           setSettingsForm({
-            tournamentName: s.tournamentName,
-            season: s.season,
-            registrationFee: s.registrationFee,
-            registrationCapacity: s.registrationCapacity,
-            registrationOpen: s.registrationOpen,
-            capacityCountingRule: s.capacityCountingRule || 'paid',
-            registrationDeadline: s.registrationDeadline ? s.registrationDeadline.slice(0, 10) : '',
-            tournamentDates: s.tournamentDates,
-            tournamentVenue: s.tournamentVenue,
-            firstPrize: s.firstPrize,
-            secondPrize: s.secondPrize,
-            contactName1: s.contactName1,
-            contactNumber1: s.contactNumber1,
-            contactName2: s.contactName2,
-            contactNumber2: s.contactNumber2,
+            tournamentName: data.settings.tournamentName || '',
+            season: data.settings.season || '',
+            registrationCapacity: data.settings.registrationCapacity || 100,
+            registrationOpen: data.settings.registrationOpen ?? true,
+            registrationDeadline: data.settings.registrationDeadline
+              ? new Date(data.settings.registrationDeadline).toISOString().slice(0, 16)
+              : '',
+            tournamentDates: data.settings.tournamentDates || '',
+            tournamentVenue: data.settings.tournamentVenue || '',
+            firstPrize: data.settings.firstPrize || '',
+            secondPrize: data.settings.secondPrize || '',
+            contactName1: data.settings.contactName1 || '',
+            contactNumber1: data.settings.contactNumber1 || '',
+            contactName2: data.settings.contactName2 || '',
+            contactNumber2: data.settings.contactNumber2 || '',
+            rules: data.settings.rules || '',
           });
         }
-      });
+      })
+      .catch((err) => console.error(err));
   };
 
-  // 6. Fetch Admins
+  // 5. Fetch Admins
   const loadAdmins = () => {
-    if (session?.role !== 'supervisor') return;
     fetch('/api/admin/users')
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
           setAdminsList(data.admins);
         }
-      });
+      })
+      .catch((err) => console.error(err));
   };
 
-  // 7. Fetch Logs
+  // 6. Fetch Logs
   const loadLogs = () => {
-    if (session?.role !== 'supervisor') return;
     setLoadingLogs(true);
-    fetch('/api/admin/logs')
+    fetch('/api/admin/logs?limit=50')
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
           setLogs(data.logs);
         }
       })
+      .catch((err) => console.error(err))
       .finally(() => setLoadingLogs(false));
   };
 
+  // Trigger loads on tab change
   useEffect(() => {
     if (!session) return;
     loadStats();
     if (activeTab === 'players') loadPlayers();
-    if (activeTab === 'payments') loadPayments();
     if (activeTab === 'settings') loadSettings();
     if (activeTab === 'admins') loadAdmins();
     if (activeTab === 'logs') loadLogs();
-  }, [session, activeTab, page, categoryFilter, paymentFilter, selectionFilter]);
+  }, [session, activeTab, page, categoryFilter, selectionFilter]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -263,26 +237,6 @@ export default function AdminDashboardPage() {
       const data = await res.json();
       if (data.success) {
         showFeedback('success', 'ಆಟಗಾರರ ಆಯ್ಕೆ ಸ್ಥಿತಿಯನ್ನು ನವೀಕರಿಸಲಾಗಿದೆ.');
-        loadPlayers();
-        loadStats();
-      } else {
-        showFeedback('error', data.message || 'ನವೀಕರಣ ವಿಫಲವಾಗಿದೆ.');
-      }
-    } catch {
-      showFeedback('error', 'ಸರ್ವರ್ ದೋಷ.');
-    }
-  };
-
-  const handleUpdatePayment = async (playerId: string, status: string) => {
-    try {
-      const res = await fetch('/api/admin/players', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ playerId, paymentStatus: status }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        showFeedback('success', `ಪಾವತಿ ಸ್ಥಿತಿ ${status === 'paid' ? 'ದೃಢೀಕರಿಸಲಾಗಿದೆ' : status === 'rejected' ? 'ತಿರಸ್ಕರಿಸಲಾಗಿದೆ' : 'ಬಾಕಿ ಇರಿಸಲಾಗಿದೆ'}!`);
         loadPlayers();
         loadStats();
       } else {
@@ -346,22 +300,20 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleToggleAdminStatus = async (adminId: string, currentActive: boolean) => {
+  const handleToggleAdminStatus = async (adminId: string, currentStatus: boolean) => {
     try {
       const res = await fetch('/api/admin/users', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminId, isActive: !currentActive }),
+        body: JSON.stringify({ adminId, isActive: !currentStatus }),
       });
       const data = await res.json();
       if (data.success) {
         showFeedback('success', 'ನಿರ್ವಾಹಕರ ಸ್ಥಿತಿ ನವೀಕರಿಸಲಾಗಿದೆ.');
         loadAdmins();
-      } else {
-        showFeedback('error', data.message || 'ನವೀಕರಣ ವಿಫಲವಾಗಿದೆ.');
       }
     } catch {
-      showFeedback('error', 'ಸರ್ವರ್ ದೋಷ.');
+      showFeedback('error', 'ದೋಷ ಸಂಭವಿಸಿದೆ.');
     }
   };
 
@@ -372,11 +324,8 @@ export default function AdminDashboardPage() {
 
   if (loadingSession) {
     return (
-      <div className="min-h-screen bg-[#06101e] flex items-center justify-center">
-        <div className="flex items-center gap-3 text-[#fbbf24]">
-          <RefreshCw className="w-6 h-6 animate-spin" />
-          <span className="text-base font-semibold">ನಿರ್ವಾಹಕ ಅಧಿವೇಶನ ಪರಿಶೀಲಿಸಲಾಗುತ್ತಿದೆ...</span>
-        </div>
+      <div className="min-h-screen bg-[#06101e] flex items-center justify-center text-[#fbbf24]">
+        <RefreshCw className="w-8 h-8 animate-spin" />
       </div>
     );
   }
@@ -389,74 +338,103 @@ export default function AdminDashboardPage() {
     all_rounder: 'ಆಲ್ರೌಂಡರ್',
   };
 
+  const selectionBadge = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return (
+          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-950 text-emerald-400 border border-emerald-500/40">
+            ಆಯ್ಕೆಯಾಗಿದ್ದಾರೆ
+          </span>
+        );
+      case 'not_selected':
+        return (
+          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-red-950 text-red-400 border border-red-500/40">
+            ಆಯ್ಕೆಯಾಗಿಲ್ಲ
+          </span>
+        );
+      default:
+        return (
+          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-950 text-blue-300 border border-blue-500/40">
+            ಪರಿಶೀಲನೆಯಲ್ಲಿದೆ
+          </span>
+        );
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#06101e] text-gray-100 flex flex-col">
-      {/* Admin Top Navigation Bar */}
-      <header className="bg-[#0a192f] border-b border-[#d4af37]/30 px-4 sm:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-40 shadow-lg">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#b91c1c] via-[#d4af37] to-[#fbbf24] p-0.5 shadow-gold">
-            <div className="w-full h-full bg-[#0a1b33] rounded-xl flex items-center justify-center">
-              <Trophy className="w-5 h-5 text-[#fbbf24]" />
+      {/* Top Navigation Bar */}
+      <header className="bg-[#0a192f] border-b-2 border-[#d4af37]/40 sticky top-0 z-40 px-4 sm:px-8 py-3.5 shadow-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#b91c1c] via-[#fbbf24] to-[#15803d] p-0.5 shadow-gold">
+              <div className="w-full h-full bg-[#0a192f] rounded-full flex items-center justify-center">
+                <Trophy className="w-5 h-5 text-[#fbbf24]" />
+              </div>
+            </div>
+            <div>
+              <h1 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+                <span>ಶ್ರೀ ಬ್ರಹ್ಮಲಿಂಗೇಶ್ವರ ಕಪ್ - 2026</span>
+                <span className="text-xs px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-500/40">
+                  {isSupervisor ? 'ಮುಖ್ಯ ನಿರ್ವಾಹಕ (Supervisor)' : 'ಸಿಬ್ಬಂದಿ ನಿರ್ವಾಹಕ'}
+                </span>
+              </h1>
+              <p className="text-[11px] text-gray-400">ಅಧಿಕೃತ ಆಡಳಿತ ಮಂಡಳಿ ಫಲಕ</p>
             </div>
           </div>
-          <div>
-            <div className="text-base font-black text-white flex items-center gap-2">
-              <span>ಶ್ರೀ ಬ್ರಹ್ಮಲಿಂಗೇಶ್ವರ ಕಪ್ 2026</span>
-              <span className="text-xs px-2 py-0.5 rounded bg-[#b91c1c] text-white font-bold">
-                {isSupervisor ? 'ಮುಖ್ಯ ನಿರ್ವಾಹಕ ಫಲಕ' : 'ಸಾಮಾನ್ಯ ನಿರ್ವಾಹಕ ಫಲಕ'}
-              </span>
+
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:block text-right">
+              <div className="text-xs font-bold text-white">{session?.username}</div>
+              <div className="text-[10px] text-[#fbbf24] font-mono">{session?.role}</div>
             </div>
-            <div className="text-xs text-gray-400">
-              ಲಾಗಿನ್ ಆದವರು: <span className="text-[#fbbf24] font-semibold">{session?.username}</span>
-            </div>
+
+            <Link
+              href="/"
+              target="_blank"
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#132d54] hover:bg-[#1a3a6b] text-gray-200 border border-gray-700 flex items-center gap-1.5 transition-colors"
+            >
+              <Eye className="w-3.5 h-3.5 text-[#fbbf24]" />
+              <span className="hidden sm:inline">ವೆಬ್‌ಸೈಟ್ ನೋಡಿ</span>
+            </Link>
+
+            <button
+              onClick={handleLogout}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold bg-red-950 hover:bg-red-900 text-red-300 border border-red-800/60 flex items-center gap-1.5 transition-colors"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>ನಿರ್ಗಮಿಸಿ</span>
+            </button>
           </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <Link
-            href="/"
-            target="_blank"
-            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#132d54] hover:bg-[#1a3a6b] text-gray-200 border border-gray-600 transition-colors"
-          >
-            ಸಾರ್ವಜನಿಕ ಸೈಟ್ ವೀಕ್ಷಿಸಿ ↗
-          </Link>
-
-          <a
-            href="/api/admin/export"
-            className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-[#15803d] hover:bg-[#16a34a] text-white flex items-center gap-1.5 shadow transition-all"
-            download
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>CSV ಡೌನ್‌ಲೋಡ್</span>
-          </a>
-
-          <button
-            onClick={handleLogout}
-            className="px-3 py-1.5 rounded-lg text-xs font-bold bg-red-950/80 hover:bg-red-900 text-red-200 border border-red-500/50 flex items-center gap-1.5 transition-colors"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>ಲಾಗೌಟ್</span>
-          </button>
         </div>
       </header>
 
-      {/* Feedback banner */}
+      {/* Global Feedback Alert */}
       {feedback && (
         <div
-          className={`px-4 py-2 text-center text-sm font-bold ${
+          className={`fixed top-18 right-6 z-50 p-4 rounded-xl shadow-2xl border-2 flex items-center gap-3 animate-slide-in text-sm font-bold ${
             feedback.type === 'success'
-              ? 'bg-emerald-600 text-white'
-              : 'bg-red-600 text-white'
+              ? 'bg-emerald-950 text-emerald-200 border-emerald-500'
+              : 'bg-red-950 text-red-200 border-red-500'
           }`}
         >
-          {feedback.text}
+          {feedback.type === 'success' ? (
+            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+          ) : (
+            <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+          )}
+          <span>{feedback.text}</span>
         </div>
       )}
 
-      {/* Main Layout */}
+      {/* Layout Body: Sidebar + Content */}
       <div className="flex-1 flex flex-col md:flex-row">
-        {/* Sidebar Tabs */}
-        <aside className="w-full md:w-64 bg-[#0a192f] border-r border-gray-800 p-4 space-y-1.5 shrink-0">
+        {/* Sidebar */}
+        <aside className="w-full md:w-64 bg-[#0a192f]/90 border-r border-gray-800 p-4 space-y-1.5">
+          <div className="text-xs uppercase font-extrabold text-[#d4af37] px-3 py-2 tracking-wider">
+            ಆಡಳಿತ ಮೆನು
+          </div>
+
           <button
             onClick={() => setActiveTab('overview')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
@@ -466,7 +444,7 @@ export default function AdminDashboardPage() {
             }`}
           >
             <Trophy className="w-4 h-4 text-[#fbbf24]" />
-            <span>ಅವಲೋಕನ (Overview)</span>
+            <span>ಸಾರಾಂಶ (Overview)</span>
           </button>
 
           <button
@@ -479,18 +457,6 @@ export default function AdminDashboardPage() {
           >
             <Users className="w-4 h-4 text-[#fbbf24]" />
             <span>ಆಟಗಾರರ ನಿರ್ವಹಣೆ (Players)</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('payments')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
-              activeTab === 'payments'
-                ? 'bg-gradient-to-r from-[#b91c1c] to-[#991b1b] text-white shadow-md border border-[#fbbf24]/50'
-                : 'text-gray-300 hover:bg-[#0e2444] hover:text-[#fbbf24]'
-            }`}
-          >
-            <CreditCard className="w-4 h-4 text-[#fbbf24]" />
-            <span>ಪಾವತಿ ದಾಖಲೆಗಳು (Payments)</span>
           </button>
 
           {isSupervisor && (
@@ -556,7 +522,7 @@ export default function AdminDashboardPage() {
                 </button>
               </div>
 
-              {/* 8 Required Dashboard Summary Cards */}
+              {/* 8 Dashboard Summary Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* 1. ಒಟ್ಟು ನೋಂದಣಿಗಳು */}
                 <div className="bg-[#0a192f] p-5 rounded-2xl border border-gray-700/80 shadow-md">
@@ -570,49 +536,47 @@ export default function AdminDashboardPage() {
                   <div className="text-xs text-gray-400 mt-1">ದಾಖಲಾದ ಒಟ್ಟು ಆಟಗಾರರು</div>
                 </div>
 
-                {/* 2. ಪಾವತಿ ಪೂರ್ಣಗೊಂಡವರು */}
-                <div className="bg-[#0a192f] p-5 rounded-2xl border border-emerald-500/40 shadow-md">
-                  <div className="flex items-center justify-between text-emerald-400 mb-2">
-                    <span className="text-xs font-bold">ಪಾವತಿ ಪೂರ್ಣಗೊಂಡವರು</span>
-                    <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                  </div>
-                  <div className="text-3xl font-black text-emerald-400">
-                    {stats?.paidPlayers ?? 0}
-                  </div>
-                  <div className="text-xs text-gray-400 mt-1">
-                    ಒಟ್ಟು ಮೊತ್ತ: ₹{(stats?.totalCollectedAmount ?? 0).toLocaleString()}
-                  </div>
-                </div>
-
-                {/* 3. ಪಾವತಿ ಬಾಕಿಯಿರುವವರು */}
+                {/* 2. ಬ್ಯಾಟ್ಸ್‌ಮನ್‌ಗಳು */}
                 <div className="bg-[#0a192f] p-5 rounded-2xl border border-amber-500/40 shadow-md">
                   <div className="flex items-center justify-between text-amber-400 mb-2">
-                    <span className="text-xs font-bold">ಪಾವತಿ ಬಾಕಿಯಿರುವವರು</span>
-                    <Clock className="w-5 h-5 text-amber-400" />
+                    <span className="text-xs font-bold">ಬ್ಯಾಟ್ಸ್‌ಮನ್‌ಗಳು</span>
+                    <Trophy className="w-5 h-5 text-amber-400" />
                   </div>
-                  <div className="text-3xl font-black text-amber-400">
-                    {stats?.pendingPayment ?? 0}
+                  <div className="text-3xl font-black text-amber-300">
+                    {stats?.batsmen ?? 0}
                   </div>
-                  <div className="text-xs text-gray-400 mt-1">ಶುಲ್ಕ ಪಾವತಿಗಾಗಿ ಕಾಯಲಾಗುತ್ತಿದೆ</div>
+                  <div className="text-xs text-gray-400 mt-1">ನೋಂದಾಯಿತ ಬ್ಯಾಟ್ಸ್‌ಮನ್‌ಗಳು</div>
                 </div>
 
-                {/* 4. ಆಯ್ಕೆ ಬಾಕಿಯಿರುವವರು */}
-                <div className="bg-[#0a192f] p-5 rounded-2xl border border-blue-500/40 shadow-md">
-                  <div className="flex items-center justify-between text-blue-400 mb-2">
-                    <span className="text-xs font-bold">ಆಯ್ಕೆ ಬಾಕಿಯಿರುವವರು</span>
-                    <Users className="w-5 h-5 text-blue-400" />
+                {/* 3. ಬೌಲರ್‌ಗಳು */}
+                <div className="bg-[#0a192f] p-5 rounded-2xl border border-red-500/40 shadow-md">
+                  <div className="flex items-center justify-between text-red-400 mb-2">
+                    <span className="text-xs font-bold">ಬೌಲರ್‌ಗಳು</span>
+                    <Sparkles className="w-5 h-5 text-red-400" />
                   </div>
-                  <div className="text-3xl font-black text-blue-300">
-                    {stats?.selectionPending ?? 0}
+                  <div className="text-3xl font-black text-red-300">
+                    {stats?.bowlers ?? 0}
                   </div>
-                  <div className="text-xs text-gray-400 mt-1">ಪರಿಶೀಲನೆಯಲ್ಲಿರುವ ಆಟಗಾರರು</div>
+                  <div className="text-xs text-gray-400 mt-1">ನೋಂದಾಯಿತ ಬೌಲರ್‌ಗಳು</div>
+                </div>
+
+                {/* 4. ಆಲ್‌ರೌಂಡರ್‌ಗಳು */}
+                <div className="bg-[#0a192f] p-5 rounded-2xl border border-purple-500/40 shadow-md">
+                  <div className="flex items-center justify-between text-purple-400 mb-2">
+                    <span className="text-xs font-bold">ಆಲ್‌ರೌಂಡರ್‌ಗಳು</span>
+                    <Users className="w-5 h-5 text-purple-400" />
+                  </div>
+                  <div className="text-3xl font-black text-purple-300">
+                    {stats?.allRounders ?? 0}
+                  </div>
+                  <div className="text-xs text-gray-400 mt-1">ನೋಂದಾಯಿತ ಆಲ್‌ರೌಂಡರ್‌ಗಳು</div>
                 </div>
 
                 {/* 5. ಆಯ್ಕೆಯಾದ ಆಟಗಾರರು */}
                 <div className="bg-[#0a192f] p-5 rounded-2xl border border-[#fbbf24]/50 shadow-gold">
                   <div className="flex items-center justify-between text-[#fbbf24] mb-2">
                     <span className="text-xs font-bold">ಆಯ್ಕೆಯಾದ ಆಟಗಾರರು</span>
-                    <Trophy className="w-5 h-5 text-[#fbbf24]" />
+                    <UserCheck className="w-5 h-5 text-[#fbbf24]" />
                   </div>
                   <div className="text-3xl font-black text-[#fbbf24]">
                     {stats?.approvedPlayers ?? 0}
@@ -620,25 +584,25 @@ export default function AdminDashboardPage() {
                   <div className="text-xs text-emerald-400 mt-1">ತಂಡಕ್ಕೆ ಆಯ್ಕೆ ಮಾಡಲಾಗಿದೆ</div>
                 </div>
 
-                {/* 6. ಆಯ್ಕೆಯಾಗದ ಆಟಗಾರರು */}
-                <div className="bg-[#0a192f] p-5 rounded-2xl border border-red-500/40 shadow-md">
-                  <div className="flex items-center justify-between text-red-400 mb-2">
-                    <span className="text-xs font-bold">ಆಯ್ಕೆಯಾಗದ ಆಟಗಾರರು</span>
-                    <XCircle className="w-5 h-5 text-red-400" />
+                {/* 6. ಆಯ್ಕೆ ಬಾಕಿಯಿರುವವರು */}
+                <div className="bg-[#0a192f] p-5 rounded-2xl border border-blue-500/40 shadow-md">
+                  <div className="flex items-center justify-between text-blue-400 mb-2">
+                    <span className="text-xs font-bold">ಆಯ್ಕೆ ಬಾಕಿಯಿರುವವರು</span>
+                    <Clock className="w-5 h-5 text-blue-400" />
                   </div>
-                  <div className="text-3xl font-black text-red-400">
-                    {stats?.notSelectedPlayers ?? 0}
+                  <div className="text-3xl font-black text-blue-300">
+                    {stats?.selectionPending ?? 0}
                   </div>
-                  <div className="text-xs text-gray-400 mt-1">ಆಯ್ಕೆ ಮಾಡದ ಆಟಗಾರರು</div>
+                  <div className="text-xs text-gray-400 mt-1">ಪರಿಶೀಲನೆಯಲ್ಲಿರುವ ಆಟಗಾರರು</div>
                 </div>
 
-                {/* 7. ಲಭ್ಯವಿರುವ ನೋಂದಣಿ ಸ್ಥಾನಗಳು */}
+                {/* 7. ಲಭ್ಯವಿರುವ ಸ್ಥಾನಗಳು */}
                 <div className="bg-[#0a192f] p-5 rounded-2xl border border-gray-700/80 shadow-md">
                   <div className="flex items-center justify-between text-gray-400 mb-2">
-                    <span className="text-xs font-bold">ಲಭ್ಯವಿರುವ ನೋಂದಣಿ ಸ್ಥಾನಗಳು</span>
-                    <Sliders className="w-5 h-5 text-purple-400" />
+                    <span className="text-xs font-bold">ಲಭ್ಯವಿರುವ ಸ್ಥಾನಗಳು</span>
+                    <Sliders className="w-5 h-5 text-cyan-400" />
                   </div>
-                  <div className="text-3xl font-black text-purple-300">
+                  <div className="text-3xl font-black text-cyan-300">
                     {stats?.availableSlots ?? 0}
                   </div>
                   <div className="text-xs text-gray-400 mt-1">
@@ -661,12 +625,30 @@ export default function AdminDashboardPage() {
                       stats?.registrationOpen ? 'text-emerald-400' : 'text-red-400'
                     }`}
                   >
-                    {stats?.registrationOpen ? 'ತೆರೆದಿದೆ (Open)' : 'ಮುಕ್ತಾಯ (Closed)'}
+                    {stats?.registrationOpen ? 'ತೆರೆಯಲಾಗಿದೆ (Open)' : 'ಮುಕ್ತಾಯ (Closed)'}
                   </div>
-                  <div className="text-xs text-gray-400 mt-1">
-                    ಶುಲ್ಕ: ₹{stats?.registrationFee ?? 250}/-
-                  </div>
+                  <div className="text-xs text-gray-400 mt-1">ಸಾರ್ವಜನಿಕ ಪ್ರವೇಶ</div>
                 </div>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="flex flex-wrap gap-4 pt-4">
+                <button
+                  onClick={() => setActiveTab('players')}
+                  className="px-6 py-3 rounded-xl font-bold text-sm bg-gradient-to-r from-[#fbbf24] to-[#f59e0b] text-gray-950 shadow-gold hover:brightness-110 flex items-center gap-2"
+                >
+                  <Users className="w-4 h-4 text-gray-950" />
+                  <span>ಆಟಗಾರರ ಪಟ್ಟಿ ಪರಿಶೀಲಿಸಿ</span>
+                </button>
+
+                <a
+                  href="/api/admin/export"
+                  download
+                  className="px-6 py-3 rounded-xl font-bold text-sm bg-[#132d54] text-white border border-[#d4af37]/40 hover:bg-[#1a3a6b] flex items-center gap-2"
+                >
+                  <Download className="w-4 h-4 text-[#fbbf24]" />
+                  <span>ಆಟಗಾರರ CSV ಡೌನ್‌ಲೋಡ್</span>
+                </a>
               </div>
             </div>
           )}
@@ -675,38 +657,58 @@ export default function AdminDashboardPage() {
           {activeTab === 'players' && (
             <div className="space-y-6">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <h2 className="text-2xl font-black text-white">
-                  ಆಟಗಾರರ ನಿರ್ವಹಣೆ (Players Management)
-                </h2>
-                <span className="text-sm text-gray-400">
-                  ಒಟ್ಟು ಫಲಿತಾಂಶಗಳು: <span className="font-bold text-white">{totalPlayers}</span>
-                </span>
+                <div>
+                  <h2 className="text-2xl font-black text-white">
+                    ಆಟಗಾರರ ನಿರ್ವಹಣೆ (Player Management)
+                  </h2>
+                  <p className="text-xs text-gray-400">ಒಟ್ಟು ನೋಂದಣಿಗಳು: {totalPlayers}</p>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <a
+                    href="/api/admin/export"
+                    download
+                    className="px-4 py-2 rounded-xl text-xs font-bold bg-[#132d54] text-white border border-gray-700 hover:bg-[#1a3a6b] flex items-center gap-1.5"
+                  >
+                    <Download className="w-4 h-4 text-[#fbbf24]" />
+                    <span>CSV ರಫ್ತು</span>
+                  </a>
+
+                  <button
+                    onClick={loadPlayers}
+                    className="px-4 py-2 rounded-xl text-xs font-bold bg-[#132d54] text-gray-200 hover:text-white flex items-center gap-1.5"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${loadingPlayers ? 'animate-spin' : ''}`} />
+                    <span>ರಿಫ್ರೆಶ್</span>
+                  </button>
+                </div>
               </div>
 
-              {/* Filters and Search Bar */}
-              <div className="bg-[#0a192f] p-4 rounded-2xl border border-gray-800 space-y-4">
+              {/* Filters & Search */}
+              <div className="bg-[#0a192f] p-4 rounded-2xl border border-gray-800 space-y-3">
                 <form onSubmit={handleSearchSubmit} className="flex gap-2">
                   <div className="relative flex-1">
-                    <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-3.5" />
+                    <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
                     <input
                       type="text"
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
-                      placeholder="ಹೆಸರು, ಮೊಬೈಲ್ ಸಂಖ್ಯೆ, ನೋಂದಣಿ ಕೋಡ್ ಮೂಲಕ ಹುಡುಕಿ..."
-                      className="w-full pl-10 pr-4 py-2.5 bg-[#0e2444] border border-gray-700 rounded-xl text-sm text-white placeholder-gray-400 focus:outline-none focus:border-[#fbbf24]"
+                      placeholder="ಹೆಸರು, ಮೊಬೈಲ್ ಸಂಖ್ಯೆ ಅಥವಾ ನೋಂದಣಿ ಕೋಡ್ ಮೂಲಕ ಹುಡುಕಿ..."
+                      className="w-full pl-9 pr-4 py-2 bg-[#0e2444] border border-gray-700 rounded-xl text-sm text-white placeholder-gray-400 focus:outline-none focus:border-[#fbbf24]"
                     />
                   </div>
                   <button
                     type="submit"
-                    className="px-5 py-2.5 bg-[#b91c1c] hover:bg-[#991b1b] text-white rounded-xl text-sm font-bold shadow"
+                    className="px-5 py-2 bg-[#fbbf24] text-gray-950 rounded-xl font-bold text-xs hover:brightness-110"
                   >
                     ಹುಡುಕಿ
                   </button>
                 </form>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  {/* Category Filter */}
                   <div>
-                    <label className="block text-gray-400 mb-1">ಆಟಗಾರರ ವಿಭಾಗ:</label>
+                    <label className="block text-gray-400 mb-1 font-semibold">ವಿಭಾಗದ ಪ್ರಕಾರ:</label>
                     <select
                       value={categoryFilter}
                       onChange={(e) => setCategoryFilter(e.target.value)}
@@ -719,22 +721,9 @@ export default function AdminDashboardPage() {
                     </select>
                   </div>
 
+                  {/* Selection Filter */}
                   <div>
-                    <label className="block text-gray-400 mb-1">ಪಾವತಿ ಸ್ಥಿತಿ:</label>
-                    <select
-                      value={paymentFilter}
-                      onChange={(e) => setPaymentFilter(e.target.value)}
-                      className="w-full bg-[#0e2444] border border-gray-700 rounded-lg p-2 text-white"
-                    >
-                      <option value="">ಎಲ್ಲ ಪಾವತಿ ಸ್ಥಿತಿಗಳು</option>
-                      <option value="paid">ಪಾವತಿಸಲಾಗಿದೆ (Paid)</option>
-                      <option value="pending">ಪಾವತಿ ಬಾಕಿ (Pending)</option>
-                      <option value="failed">ವಿಫಲ (Failed)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-gray-400 mb-1">ಆಯ್ಕೆ ಸ್ಥಿತಿ:</label>
+                    <label className="block text-gray-400 mb-1 font-semibold">ಆಯ್ಕೆ ಸ್ಥಿತಿ:</label>
                     <select
                       value={selectionFilter}
                       onChange={(e) => setSelectionFilter(e.target.value)}
@@ -761,7 +750,8 @@ export default function AdminDashboardPage() {
                         <th className="p-3">ಮೊಬೈಲ್</th>
                         <th className="p-3">ವಿಭಾಗ</th>
                         <th className="p-3">ಯಾರ ಮಾರ್ಗದರ್ಶನ</th>
-                        <th className="p-3">ಪಾವತಿ ರಶೀದಿ & ಸ್ಥಿತಿ</th>
+                        <th className="p-3">ವಿಳಾಸ</th>
+                        <th className="p-3">ದಿನಾಂಕ</th>
                         <th className="p-3">ಆಯ್ಕೆ ಸ್ಥಿತಿ</th>
                         <th className="p-3 text-center">ಕ್ರಮಗಳು</th>
                       </tr>
@@ -769,14 +759,14 @@ export default function AdminDashboardPage() {
                     <tbody className="divide-y divide-gray-800 text-gray-200">
                       {loadingPlayers ? (
                         <tr>
-                          <td colSpan={9} className="p-8 text-center text-gray-400">
+                          <td colSpan={10} className="p-8 text-center text-gray-400">
                             <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-[#fbbf24]" />
                             <span>ಆಟಗಾರರ ಮಾಹಿತಿಯನ್ನು ಲೋಡ್ ಮಾಡಲಾಗುತ್ತಿದೆ...</span>
                           </td>
                         </tr>
                       ) : players.length === 0 ? (
                         <tr>
-                          <td colSpan={9} className="p-8 text-center text-gray-400">
+                          <td colSpan={10} className="p-8 text-center text-gray-400">
                             ಯಾವುದೇ ಆಟಗಾರರ ದಾಖಲೆ ಕಂಡುಬಂದಿಲ್ಲ.
                           </td>
                         </tr>
@@ -809,10 +799,7 @@ export default function AdminDashboardPage() {
 
                             {/* Player Name */}
                             <td className="p-3 font-bold text-white">
-                              <div>{p.fullName}</div>
-                              <div className="text-xs text-gray-400 font-normal truncate max-w-[150px]">
-                                {p.address}
-                              </div>
+                              {p.fullName}
                             </td>
 
                             {/* Mobile */}
@@ -832,111 +819,45 @@ export default function AdminDashboardPage() {
                               </span>
                             </td>
 
-                            {/* Payment Receipt & Status */}
-                            <td className="p-3">
-                              <div className="space-y-1.5">
-                                {p.paymentReceiptUrl ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setPreviewReceiptUrl(p.paymentReceiptUrl);
-                                      setPreviewReceiptPlayerName(p.fullName);
-                                      setPreviewReceiptPlayerId(p.id);
-                                    }}
-                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-[#132d54] hover:bg-[#1a3a6b] text-[#fbbf24] border border-[#d4af37]/40 text-xs font-bold transition-colors"
-                                  >
-                                    <FileCheck2 className="w-3.5 h-3.5" />
-                                    <span>ರಶೀದಿ ನೋಡಿ</span>
-                                  </button>
-                                ) : (
-                                  <span className="text-gray-500 text-xs italic">ರಶೀದಿ ಇಲ್ಲ</span>
-                                )}
-
-                                <div>
-                                  {p.paymentStatus === 'paid' ? (
-                                    <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-500/40">
-                                      ದೃಢೀಕರಿಸಲಾಗಿದೆ
-                                    </span>
-                                  ) : p.paymentStatus === 'rejected' ? (
-                                    <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-red-950 text-red-400 border border-red-500/40">
-                                      ತಿರಸ್ಕರಿಸಲಾಗಿದೆ
-                                    </span>
-                                  ) : (
-                                    <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-950 text-amber-400 border border-amber-500/40">
-                                      ಪರಿಶೀಲನೆಯಲ್ಲಿದೆ
-                                    </span>
-                                  )}
-                                </div>
-
-                                {/* Fast Verification Buttons */}
-                                <div className="flex items-center gap-1 pt-0.5">
-                                  {p.paymentStatus !== 'paid' && (
-                                    <button
-                                      onClick={() => handleUpdatePayment(p.id, 'paid')}
-                                      title="ಪಾವತಿ ದೃಢೀಕರಿಸಿ (Approve Payment)"
-                                      className="px-2 py-0.5 rounded bg-emerald-900/70 hover:bg-emerald-800 text-emerald-300 border border-emerald-600 text-[10px] font-bold"
-                                    >
-                                      ದೃಢೀಕರಿಸಿ
-                                    </button>
-                                  )}
-                                  {p.paymentStatus !== 'rejected' && (
-                                    <button
-                                      onClick={() => handleUpdatePayment(p.id, 'rejected')}
-                                      title="ರಶೀದಿ ತಿರಸ್ಕರಿಸಿ (Reject Receipt)"
-                                      className="px-2 py-0.5 rounded bg-red-900/70 hover:bg-red-800 text-red-300 border border-red-600 text-[10px] font-bold"
-                                    >
-                                      ತಿರಸ್ಕರಿಸಿ
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
+                            {/* Address */}
+                            <td className="p-3 text-xs text-gray-400 max-w-[160px] truncate">
+                              {p.address}
                             </td>
 
-                            {/* Selection Status */}
-                            <td className="p-3">
-                              {p.selectionStatus === 'approved' ? (
-                                <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-500/40">
-                                  <CheckCircle2 className="w-3.5 h-3.5" />
-                                  <span>ಆಯ್ಕೆಯಾಗಿದ್ದಾರೆ</span>
-                                </span>
-                              ) : p.selectionStatus === 'not_selected' ? (
-                                <span className="inline-flex items-center gap-1 text-xs font-bold text-red-400 bg-red-950/80 px-2 py-0.5 rounded border border-red-500/40">
-                                  <XCircle className="w-3.5 h-3.5" />
-                                  <span>ಆಯ್ಕೆಯಾಗಿಲ್ಲ</span>
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 text-xs font-bold text-blue-400 bg-blue-950/80 px-2 py-0.5 rounded border border-blue-500/40">
-                                  <Clock className="w-3.5 h-3.5" />
-                                  <span>ಪರಿಶೀಲನೆಯಲ್ಲಿದೆ</span>
-                                </span>
-                              )}
+                            {/* Date */}
+                            <td className="p-3 text-xs text-gray-400">
+                              {new Date(p.createdAt).toLocaleDateString('kn-IN')}
                             </td>
 
-                            {/* Actions: Approve / Reject / Reset */}
+                            {/* Selection status */}
+                            <td className="p-3">
+                              {selectionBadge(p.selectionStatus)}
+                            </td>
+
+                            {/* Actions: Approve / Not Selected */}
                             <td className="p-3 text-center">
-                              <div className="inline-flex items-center gap-1">
+                              <div className="flex items-center justify-center gap-1.5">
                                 <button
                                   onClick={() => handleUpdateSelection(p.id, 'approved')}
-                                  title="ಆಯ್ಕೆ ಅನುಮೋದಿಸಿ (Approve)"
-                                  className="p-1.5 rounded-lg bg-emerald-900/60 hover:bg-emerald-800 text-emerald-300 border border-emerald-600 transition-colors"
+                                  title="ಆಯ್ಕೆ ಮಾಡಿ (Approve)"
+                                  className={`p-1.5 rounded-lg border text-xs font-bold transition-all ${
+                                    p.selectionStatus === 'approved'
+                                      ? 'bg-emerald-600 text-white border-emerald-400'
+                                      : 'bg-[#132d54] text-emerald-400 border-emerald-600/40 hover:bg-emerald-950'
+                                  }`}
                                 >
-                                  <CheckCircle2 className="w-4 h-4" />
+                                  <UserCheck className="w-4 h-4" />
                                 </button>
-
                                 <button
                                   onClick={() => handleUpdateSelection(p.id, 'not_selected')}
-                                  title="ಆಯ್ಕೆ ತಿರಸ್ಕರಿಸಿ (Not Selected)"
-                                  className="p-1.5 rounded-lg bg-red-900/60 hover:bg-red-800 text-red-300 border border-red-600 transition-colors"
+                                  title="ತಿರಸ್ಕರಿಸಿ (Not Selected)"
+                                  className={`p-1.5 rounded-lg border text-xs font-bold transition-all ${
+                                    p.selectionStatus === 'not_selected'
+                                      ? 'bg-red-600 text-white border-red-400'
+                                      : 'bg-[#132d54] text-red-400 border-red-600/40 hover:bg-red-950'
+                                  }`}
                                 >
-                                  <XCircle className="w-4 h-4" />
-                                </button>
-
-                                <button
-                                  onClick={() => handleUpdateSelection(p.id, 'pending')}
-                                  title="ಬಾಕಿ ಇರಿಸಿ (Pending)"
-                                  className="p-1.5 rounded-lg bg-blue-900/60 hover:bg-blue-800 text-blue-300 border border-blue-600 transition-colors"
-                                >
-                                  <Clock className="w-4 h-4" />
+                                  <UserX className="w-4 h-4" />
                                 </button>
                               </div>
                             </td>
@@ -948,22 +869,23 @@ export default function AdminDashboardPage() {
                 </div>
 
                 {/* Pagination */}
-                <div className="p-4 bg-[#0e2444] border-t border-gray-800 flex items-center justify-between text-xs text-gray-400">
-                  <div>ಪುಟ {page}</div>
-                  <div className="flex gap-2">
+                <div className="p-4 bg-[#0e2444] border-t border-gray-800 flex items-center justify-between text-xs text-gray-300">
+                  <div>ಒಟ್ಟು: {totalPlayers} ಆಟಗಾರರು</div>
+                  <div className="flex items-center gap-2">
                     <button
                       onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      disabled={page <= 1}
-                      className="px-3 py-1.5 rounded bg-[#132d54] text-white disabled:opacity-50 flex items-center gap-1"
+                      disabled={page === 1}
+                      className="px-3 py-1.5 rounded bg-[#132d54] text-white disabled:opacity-50"
                     >
-                      <ChevronLeft className="w-4 h-4" /> ಹಿಂದಿನ ಪುಟ
+                      ಹಿಂದಿನ ಪುಟ
                     </button>
+                    <span>ಪುಟ {page}</span>
                     <button
                       onClick={() => setPage((p) => p + 1)}
                       disabled={page * 15 >= totalPlayers}
-                      className="px-3 py-1.5 rounded bg-[#132d54] text-white disabled:opacity-50 flex items-center gap-1"
+                      className="px-3 py-1.5 rounded bg-[#132d54] text-white disabled:opacity-50"
                     >
-                      ಮುಂದಿನ ಪುಟ <ChevronRight className="w-4 h-4" />
+                      ಮುಂದಿನ ಪುಟ
                     </button>
                   </div>
                 </div>
@@ -971,83 +893,7 @@ export default function AdminDashboardPage() {
             </div>
           )}
 
-          {/* TAB 3: PAYMENTS LEDGER */}
-          {activeTab === 'payments' && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-black text-white">
-                ಪಾವತಿ ದಾಖಲೆಗಳು (Payments Ledger)
-              </h2>
-
-              <div className="bg-[#0a192f] rounded-2xl border border-gray-800 overflow-hidden shadow-xl">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs sm:text-sm">
-                    <thead className="bg-[#0e2444] text-[#fbbf24] uppercase text-xs font-bold border-b border-gray-700">
-                      <tr>
-                        <th className="p-3.5">ದಿನಾಂಕ</th>
-                        <th className="p-3.5">ಆಟಗಾರರ ಹೆಸರು</th>
-                        <th className="p-3.5">ನೋಂದಣಿ ಕೋಡ್</th>
-                        <th className="p-3.5">ಮೊತ್ತ</th>
-                        <th className="p-3.5">Gateway Order ID</th>
-                        <th className="p-3.5">Payment ID</th>
-                        <th className="p-3.5">ಸ್ಥಿತಿ</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-800 text-gray-200">
-                      {loadingPayments ? (
-                        <tr>
-                          <td colSpan={7} className="p-8 text-center text-gray-400">
-                            ಲೋಡ್ ಆಗುತ್ತಿದೆ...
-                          </td>
-                        </tr>
-                      ) : payments.length === 0 ? (
-                        <tr>
-                          <td colSpan={7} className="p-8 text-center text-gray-400">
-                            ಯಾವುದೇ ಪಾವತಿ ದಾಖಲೆಗಳು ಇಲ್ಲ.
-                          </td>
-                        </tr>
-                      ) : (
-                        payments.map((pmt) => (
-                          <tr key={pmt.id} className="hover:bg-[#0e2444]/50">
-                            <td className="p-3 text-xs text-gray-400">
-                              {new Date(pmt.createdAt).toLocaleString('kn-IN')}
-                            </td>
-                            <td className="p-3 font-bold text-white">
-                              {pmt.player?.fullName || '-'}
-                            </td>
-                            <td className="p-3 font-mono text-[#fbbf24]">
-                              {pmt.player?.registrationCode || '-'}
-                            </td>
-                            <td className="p-3 font-bold text-emerald-400">
-                              ₹{pmt.amount}/-
-                            </td>
-                            <td className="p-3 font-mono text-xs text-gray-300">
-                              {pmt.gatewayOrderId || '-'}
-                            </td>
-                            <td className="p-3 font-mono text-xs text-gray-300">
-                              {pmt.gatewayPaymentId || '-'}
-                            </td>
-                            <td className="p-3">
-                              {pmt.paymentStatus === 'captured' ? (
-                                <span className="px-2 py-0.5 rounded text-xs font-bold bg-emerald-950 text-emerald-400 border border-emerald-500/40">
-                                  Captured
-                                </span>
-                              ) : (
-                                <span className="px-2 py-0.5 rounded text-xs font-bold bg-amber-950 text-amber-400 border border-amber-500/40">
-                                  {pmt.paymentStatus}
-                                </span>
-                              )}
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 4: SETTINGS (SUPERVISOR ONLY) */}
+          {/* TAB 3: SETTINGS (SUPERVISOR ONLY) */}
           {activeTab === 'settings' && isSupervisor && (
             <div className="max-w-3xl space-y-6">
               <h2 className="text-2xl font-black text-white">
@@ -1056,22 +902,6 @@ export default function AdminDashboardPage() {
 
               <form onSubmit={handleSaveSettings} className="bg-[#0a192f] p-6 sm:p-8 rounded-2xl border-2 border-[#d4af37]/40 shadow-xl space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Fee */}
-                  <div>
-                    <label className="block text-xs font-bold text-gray-300 mb-1">
-                      ನೋಂದಣಿ ಶುಲ್ಕ (₹):
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      value={settingsForm.registrationFee}
-                      onChange={(e) =>
-                        setSettingsForm({ ...settingsForm, registrationFee: Number(e.target.value) })
-                      }
-                      className="w-full px-3 py-2 bg-[#0e2444] border border-gray-700 rounded-lg text-white font-bold"
-                    />
-                  </div>
-
                   {/* Capacity */}
                   <div>
                     <label className="block text-xs font-bold text-gray-300 mb-1">
@@ -1082,72 +912,91 @@ export default function AdminDashboardPage() {
                       required
                       value={settingsForm.registrationCapacity}
                       onChange={(e) =>
-                        setSettingsForm({ ...settingsForm, registrationCapacity: Number(e.target.value) })
+                        setSettingsForm({
+                          ...settingsForm,
+                          registrationCapacity: Number(e.target.value),
+                        })
+                      }
+                      className="w-full px-3 py-2 bg-[#0e2444] border border-gray-700 rounded-lg text-white"
+                    />
+                  </div>
+
+                  {/* Open/Close Switch */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-300 mb-1">
+                      ನೋಂದಣಿ ಸ್ಥಿತಿ:
+                    </label>
+                    <select
+                      value={settingsForm.registrationOpen ? 'true' : 'false'}
+                      onChange={(e) =>
+                        setSettingsForm({
+                          ...settingsForm,
+                          registrationOpen: e.target.value === 'true',
+                        })
+                      }
+                      className="w-full px-3 py-2 bg-[#0e2444] border border-gray-700 rounded-lg text-white font-bold"
+                    >
+                      <option value="true">ತೆರೆಯಲಾಗಿದೆ (Registration Open)</option>
+                      <option value="false">ಮುಚ್ಚಲಾಗಿದೆ (Registration Closed)</option>
+                    </select>
+                  </div>
+
+                  {/* Tournament Name */}
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-bold text-gray-300 mb-1">
+                      ಪಂದ್ಯಾವಳಿ ಹೆಸರು:
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={settingsForm.tournamentName}
+                      onChange={(e) =>
+                        setSettingsForm({ ...settingsForm, tournamentName: e.target.value })
                       }
                       className="w-full px-3 py-2 bg-[#0e2444] border border-gray-700 rounded-lg text-white font-bold"
                     />
                   </div>
-                </div>
 
-                {/* Open / Close Toggle */}
-                <div className="bg-[#0e2444] p-4 rounded-xl border border-gray-700 flex items-center justify-between">
+                  {/* Season */}
                   <div>
-                    <div className="text-sm font-bold text-white">
-                      ಆಟಗಾರರ ನೋಂದಣಿ ತೆರೆಯಿರಿ / ಮುಕ್ತಾಯಗೊಳಿಸಿ
-                    </div>
-                    <div className="text-xs text-gray-400 mt-0.5">
-                      {settingsForm.registrationOpen
-                        ? 'ಪ್ರಸ್ತುತ ಸಾರ್ವಜನಿಕರಿಗೆ ಹೊಸ ನೋಂದಣಿಗಳು ಮುಕ್ತವಾಗಿವೆ'
-                        : 'ಪ್ರಸ್ತುತ ಹೊಸ ನೋಂದಣಿಗಳನ್ನು ತಾತ್ಕಾಲಿಕವಾಗಿ ಮುಚ್ಚಲಾಗಿದೆ'}
-                    </div>
+                    <label className="block text-xs font-bold text-gray-300 mb-1">ಸೀಸನ್:</label>
+                    <input
+                      type="text"
+                      value={settingsForm.season}
+                      onChange={(e) =>
+                        setSettingsForm({ ...settingsForm, season: e.target.value })
+                      }
+                      className="w-full px-3 py-2 bg-[#0e2444] border border-gray-700 rounded-lg text-white"
+                    />
                   </div>
 
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={settingsForm.registrationOpen}
-                      onChange={(e) =>
-                        setSettingsForm({ ...settingsForm, registrationOpen: e.target.checked })
-                      }
-                      className="sr-only peer"
-                    />
-                    <div className="w-14 h-7 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-emerald-600"></div>
-                  </label>
-                </div>
-
-                {/* Dates & Venue */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Dates */}
                   <div>
-                    <label className="block text-xs font-bold text-gray-300 mb-1">
-                      ಪಂದ್ಯಾವಳಿ ದಿನಾಂಕಗಳು:
-                    </label>
+                    <label className="block text-xs font-bold text-gray-300 mb-1">ದಿನಾಂಕಗಳು:</label>
                     <input
                       type="text"
                       value={settingsForm.tournamentDates}
                       onChange={(e) =>
                         setSettingsForm({ ...settingsForm, tournamentDates: e.target.value })
                       }
-                      className="w-full px-3 py-2 bg-[#0e2444] border border-gray-700 rounded-lg text-white text-sm"
+                      className="w-full px-3 py-2 bg-[#0e2444] border border-gray-700 rounded-lg text-white"
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-gray-300 mb-1">
-                      ಪಂದ್ಯಾವಳಿ ಸ್ಥಳ (Venue):
-                    </label>
+                  {/* Venue */}
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-bold text-gray-300 mb-1">ಸ್ಥಳ (Venue):</label>
                     <input
                       type="text"
                       value={settingsForm.tournamentVenue}
                       onChange={(e) =>
                         setSettingsForm({ ...settingsForm, tournamentVenue: e.target.value })
                       }
-                      className="w-full px-3 py-2 bg-[#0e2444] border border-gray-700 rounded-lg text-white text-sm"
+                      className="w-full px-3 py-2 bg-[#0e2444] border border-gray-700 rounded-lg text-white"
                     />
                   </div>
-                </div>
 
-                {/* Prizes */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* 1st Prize */}
                   <div>
                     <label className="block text-xs font-bold text-gray-300 mb-1">
                       ಪ್ರಥಮ ಬಹುಮಾನ:
@@ -1158,10 +1007,11 @@ export default function AdminDashboardPage() {
                       onChange={(e) =>
                         setSettingsForm({ ...settingsForm, firstPrize: e.target.value })
                       }
-                      className="w-full px-3 py-2 bg-[#0e2444] border border-gray-700 rounded-lg text-white text-sm"
+                      className="w-full px-3 py-2 bg-[#0e2444] border border-gray-700 rounded-lg text-white font-bold text-emerald-400"
                     />
                   </div>
 
+                  {/* 2nd Prize */}
                   <div>
                     <label className="block text-xs font-bold text-gray-300 mb-1">
                       ದ್ವಿತೀಯ ಬಹುಮಾನ:
@@ -1172,175 +1022,175 @@ export default function AdminDashboardPage() {
                       onChange={(e) =>
                         setSettingsForm({ ...settingsForm, secondPrize: e.target.value })
                       }
-                      className="w-full px-3 py-2 bg-[#0e2444] border border-gray-700 rounded-lg text-white text-sm"
+                      className="w-full px-3 py-2 bg-[#0e2444] border border-gray-700 rounded-lg text-white font-bold text-emerald-400"
                     />
+                  </div>
+
+                  {/* Contacts */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-300 mb-1">
+                      ಸಂಪರ್ಕ ೧ (ಹೆಸರು & ಸಂಖ್ಯೆ):
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        placeholder="ಹೆಸರು"
+                        value={settingsForm.contactName1}
+                        onChange={(e) =>
+                          setSettingsForm({ ...settingsForm, contactName1: e.target.value })
+                        }
+                        className="px-3 py-2 bg-[#0e2444] border border-gray-700 rounded-lg text-white"
+                      />
+                      <input
+                        type="text"
+                        placeholder="ಸಂಖ್ಯೆ"
+                        value={settingsForm.contactNumber1}
+                        onChange={(e) =>
+                          setSettingsForm({ ...settingsForm, contactNumber1: e.target.value })
+                        }
+                        className="px-3 py-2 bg-[#0e2444] border border-gray-700 rounded-lg text-white font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-300 mb-1">
+                      ಸಂಪರ್ಕ ೨ (ಹೆಸರು & ಸಂಖ್ಯೆ):
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        placeholder="ಹೆಸರು"
+                        value={settingsForm.contactName2}
+                        onChange={(e) =>
+                          setSettingsForm({ ...settingsForm, contactName2: e.target.value })
+                        }
+                        className="px-3 py-2 bg-[#0e2444] border border-gray-700 rounded-lg text-white"
+                      />
+                      <input
+                        type="text"
+                        placeholder="ಸಂಖ್ಯೆ"
+                        value={settingsForm.contactNumber2}
+                        onChange={(e) =>
+                          setSettingsForm({ ...settingsForm, contactNumber2: e.target.value })
+                        }
+                        className="px-3 py-2 bg-[#0e2444] border border-gray-700 rounded-lg text-white font-mono"
+                      />
+                    </div>
                   </div>
                 </div>
 
-                {/* Contacts */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-300 mb-1">
-                      ಸಂಪರ್ಕ ೧ (ತೀರ್ಥೇಶ್‌):
-                    </label>
-                    <input
-                      type="text"
-                      value={settingsForm.contactNumber1}
-                      onChange={(e) =>
-                        setSettingsForm({ ...settingsForm, contactNumber1: e.target.value })
-                      }
-                      className="w-full px-3 py-2 bg-[#0e2444] border border-gray-700 rounded-lg text-white text-sm"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-300 mb-1">
-                      ಸಂಪರ್ಕ ೨ (ಪ್ರಜ್ವಲ್ PK):
-                    </label>
-                    <input
-                      type="text"
-                      value={settingsForm.contactNumber2}
-                      onChange={(e) =>
-                        setSettingsForm({ ...settingsForm, contactNumber2: e.target.value })
-                      }
-                      className="w-full px-3 py-2 bg-[#0e2444] border border-gray-700 rounded-lg text-white text-sm"
-                    />
-                  </div>
+                <div className="pt-4 border-t border-gray-800 flex justify-end">
+                  <button
+                    type="submit"
+                    disabled={savingSettings}
+                    className="px-6 py-3 rounded-xl bg-gradient-to-r from-[#fbbf24] to-[#f59e0b] text-gray-950 font-extrabold text-sm shadow-gold hover:brightness-110 flex items-center gap-2"
+                  >
+                    {savingSettings ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin text-gray-950" />
+                        <span>ಉಳಿಸಲಾಗುತ್ತಿದೆ...</span>
+                      </>
+                    ) : (
+                      <span>ಸೆಟ್ಟಿಂಗ್ಸ್ ಉಳಿಸಿ (Save Settings)</span>
+                    )}
+                  </button>
                 </div>
-
-                <button
-                  type="submit"
-                  disabled={savingSettings}
-                  className="w-full py-3 rounded-xl text-sm font-bold bg-gradient-to-r from-[#fbbf24] via-[#f59e0b] to-[#d4af37] text-gray-950 hover:brightness-110 shadow-gold"
-                >
-                  {savingSettings ? 'ಉಳಿಸಲಾಗುತ್ತಿದೆ...' : 'ಸೆಟ್ಟಿಂಗ್ಸ್ ಉಳಿಸಿ (Save Tournament Settings)'}
-                </button>
               </form>
             </div>
           )}
 
-          {/* TAB 5: ADMINS (SUPERVISOR ONLY) */}
+          {/* TAB 4: ADMIN USERS (SUPERVISOR ONLY) */}
           {activeTab === 'admins' && isSupervisor && (
-            <div className="space-y-8">
+            <div className="max-w-4xl space-y-8">
               <h2 className="text-2xl font-black text-white">
-                ನಿರ್ವಾಹಕರ ಖಾತೆಗಳ ನಿರ್ವಹಣೆ (Admins Management)
+                ನಿರ್ವಾಹಕರ ಖಾತೆ ನಿರ್ವಹಣೆ (Admin Accounts)
               </h2>
 
-              {/* Create Normal Admin Form */}
-              <div className="bg-[#0a192f] p-6 rounded-2xl border border-gray-800 shadow-xl max-w-xl">
-                <h3 className="text-base font-bold text-[#fbbf24] mb-4 flex items-center gap-2">
-                  <PlusCircle className="w-5 h-5" />
-                  <span>ಹೊಸ ಸಾಮಾನ್ಯ ನಿರ್ವಾಹಕ ಖಾತೆ ರಚಿಸಿ</span>
+              {/* Create Admin Form */}
+              <div className="bg-[#0a192f] p-6 rounded-2xl border border-gray-800">
+                <h3 className="text-sm font-bold text-[#fbbf24] uppercase mb-4 flex items-center gap-2">
+                  <PlusCircle className="w-4 h-4" />
+                  <span>ಹೊಸ ಸಿಬ್ಬಂದಿ ನಿರ್ವಾಹಕರನ್ನು ರಚಿಸಿ</span>
                 </h3>
 
-                <form onSubmit={handleCreateAdmin} className="space-y-4">
+                <form onSubmit={handleCreateAdmin} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-gray-300 mb-1">
-                      ಬಳಕೆದಾರ ಹೆಸರು (Username):
+                    <label className="block text-xs font-semibold text-gray-300 mb-1">
+                      ಬಳಕೆದಾರ ಹೆಸರು:
                     </label>
                     <input
                       type="text"
                       required
                       value={newAdminUsername}
                       onChange={(e) => setNewAdminUsername(e.target.value)}
-                      placeholder="ಉದಾ: staff_prajwal"
-                      className="w-full px-3 py-2 bg-[#0e2444] border border-gray-700 rounded-lg text-white text-sm"
+                      placeholder="ಉದಾ: scorer_01"
+                      className="w-full px-3 py-2 bg-[#0e2444] border border-gray-700 rounded-lg text-white text-xs"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-gray-300 mb-1">
-                      ತಾತ್ಕಾಲಿಕ ಪಾಸ್‌ವರ್ಡ್ (Temporary Password):
+                    <label className="block text-xs font-semibold text-gray-300 mb-1">
+                      ಆರಂಭಿಕ ಪಾಸ್‌ವರ್ಡ್:
                     </label>
                     <input
                       type="password"
                       required
-                      minLength={8}
                       value={newAdminPassword}
                       onChange={(e) => setNewAdminPassword(e.target.value)}
                       placeholder="ಕನಿಷ್ಠ 8 ಅಕ್ಷರಗಳು"
-                      className="w-full px-3 py-2 bg-[#0e2444] border border-gray-700 rounded-lg text-white text-sm"
+                      className="w-full px-3 py-2 bg-[#0e2444] border border-gray-700 rounded-lg text-white text-xs"
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-gray-300 mb-2">
-                      ಅನುಮತಿಗಳು (Permissions):
-                    </label>
-                    <div className="space-y-2 text-xs">
-                      {[
-                        { key: 'view_players', label: 'ಆಟಗಾರರ ಪಟ್ಟಿ ವೀಕ್ಷಣೆ' },
-                        { key: 'update_selection', label: 'ಆಯ್ಕೆ ಸ್ಥಿತಿ ಬದಲಾವಣೆ' },
-                        { key: 'view_payments', label: 'ಪಾವತಿ ವಿವರ ವೀಕ್ಷಣೆ' },
-                        { key: 'export_csv', label: 'CSV ಡೌನ್‌ಲೋಡ್ ಅನುಮತಿ' },
-                      ].map((perm) => (
-                        <label key={perm.key} className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={newAdminPermissions.includes(perm.key)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setNewAdminPermissions([...newAdminPermissions, perm.key]);
-                              } else {
-                                setNewAdminPermissions(newAdminPermissions.filter((k) => k !== perm.key));
-                              }
-                            }}
-                            className="rounded border-gray-700 text-[#b91c1c]"
-                          />
-                          <span>{perm.label}</span>
-                        </label>
-                      ))}
-                    </div>
+                  <div className="flex items-end">
+                    <button
+                      type="submit"
+                      disabled={creatingAdmin}
+                      className="w-full py-2 bg-[#fbbf24] text-gray-950 font-bold rounded-lg text-xs hover:brightness-110"
+                    >
+                      {creatingAdmin ? 'ರಚಿಸಲಾಗುತ್ತಿದೆ...' : 'ಖಾತೆ ರಚಿಸಿ'}
+                    </button>
                   </div>
-
-                  <button
-                    type="submit"
-                    disabled={creatingAdmin}
-                    className="w-full py-2.5 rounded-lg text-xs font-bold bg-[#15803d] hover:bg-[#16a34a] text-white"
-                  >
-                    {creatingAdmin ? 'ರಚಿಸಲಾಗುತ್ತಿದೆ...' : 'ನಿರ್ವಾಹಕ ಖಾತೆ ರಚಿಸಿ'}
-                  </button>
                 </form>
               </div>
 
-              {/* Existing Admins Table */}
+              {/* Admins List Table */}
               <div className="bg-[#0a192f] rounded-2xl border border-gray-800 overflow-hidden shadow-xl">
                 <table className="w-full text-left text-xs sm:text-sm">
-                  <thead className="bg-[#0e2444] text-[#fbbf24] font-bold border-b border-gray-700">
+                  <thead className="bg-[#0e2444] text-[#fbbf24] uppercase text-xs font-bold border-b border-gray-700">
                     <tr>
-                      <th className="p-3.5">ಬಳಕೆದಾರ ಹೆಸರು</th>
-                      <th className="p-3.5">ಪಾತ್ರ (Role)</th>
-                      <th className="p-3.5">ಸ್ಥಿತಿ</th>
-                      <th className="p-3.5">ಅನುಮತಿಗಳು</th>
-                      <th className="p-3.5">ಕ್ರಮಗಳು</th>
+                      <th className="p-3">ಬಳಕೆದಾರ ಹೆಸರು</th>
+                      <th className="p-3">ಪಾತ್ರ</th>
+                      <th className="p-3">ಸ್ಥಿತಿ</th>
+                      <th className="p-3">ಕ್ರಮಗಳು</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-800 text-gray-200">
                     {adminsList.map((adm) => (
                       <tr key={adm.id} className="hover:bg-[#0e2444]/50">
-                        <td className="p-3 font-bold text-white">{adm.username}</td>
+                        <td className="p-3 font-bold font-mono text-white">{adm.username}</td>
                         <td className="p-3">
                           <span
                             className={`px-2 py-0.5 rounded text-xs font-bold ${
                               adm.role === 'supervisor'
-                                ? 'bg-amber-950 text-amber-400 border border-amber-500/40'
-                                : 'bg-blue-950 text-blue-400 border border-blue-500/40'
+                                ? 'bg-[#b91c1c] text-white'
+                                : 'bg-gray-800 text-gray-300'
                             }`}
                           >
-                            {adm.role === 'supervisor' ? 'ಮುಖ್ಯ ನಿರ್ವಾಹಕರು' : 'ಸಾಮಾನ್ಯ ನಿರ್ವಾಹಕರು'}
+                            {adm.role}
                           </span>
                         </td>
                         <td className="p-3">
-                          {adm.isActive ? (
-                            <span className="text-emerald-400 font-bold">ಸಕ್ರಿಯ (Active)</span>
-                          ) : (
-                            <span className="text-red-400 font-bold">ಅಮಾನತು (Inactive)</span>
-                          )}
-                        </td>
-                        <td className="p-3 text-xs text-gray-300">
-                          {adm.role === 'supervisor'
-                            ? 'ಎಲ್ಲ ಅಧಿಕಾರಗಳು'
-                            : adm.permissions?.join(', ') || 'ಯಾವುದೂ ಇಲ್ಲ'}
+                          <span
+                            className={`px-2 py-0.5 rounded text-xs font-bold ${
+                              adm.isActive
+                                ? 'bg-emerald-950 text-emerald-400'
+                                : 'bg-red-950 text-red-400'
+                            }`}
+                          >
+                            {adm.isActive ? 'ಸಕ್ರಿಯ' : 'ಅಮಾನತು'}
+                          </span>
                         </td>
                         <td className="p-3">
                           {adm.role !== 'supervisor' && (
@@ -1364,7 +1214,7 @@ export default function AdminDashboardPage() {
             </div>
           )}
 
-          {/* TAB 6: ACTIVITY LOGS (SUPERVISOR ONLY) */}
+          {/* TAB 5: ACTIVITY LOGS (SUPERVISOR ONLY) */}
           {activeTab === 'logs' && isSupervisor && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
@@ -1380,32 +1230,30 @@ export default function AdminDashboardPage() {
               </div>
 
               <div className="bg-[#0a192f] rounded-2xl border border-gray-800 overflow-hidden shadow-xl">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs font-mono">
-                    <thead className="bg-[#0e2444] text-[#fbbf24] font-bold border-b border-gray-700">
-                      <tr>
-                        <th className="p-3">ಸಮಯ (Timestamp)</th>
-                        <th className="p-3">ನಿರ್ವಾಹಕರು</th>
-                        <th className="p-3">ಚಟುವಟಿಕೆ (Action)</th>
-                        <th className="p-3">ವಿವರಗಳು (Metadata)</th>
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-[#0e2444] text-[#fbbf24] uppercase text-xs font-bold border-b border-gray-700">
+                    <tr>
+                      <th className="p-3">ಸಮಯ</th>
+                      <th className="p-3">ನಿರ್ವಾಹಕರು</th>
+                      <th className="p-3">ಕ್ರಮ (Action)</th>
+                      <th className="p-3">ವಿವರ</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-800 text-gray-300 font-mono">
+                    {logs.map((log) => (
+                      <tr key={log.id} className="hover:bg-[#0e2444]/50">
+                        <td className="p-3 text-gray-400">
+                          {new Date(log.timestamp).toLocaleString('kn-IN')}
+                        </td>
+                        <td className="p-3 font-bold text-white">{log.adminUsername || '-'}</td>
+                        <td className="p-3 text-[#fbbf24]">{log.action}</td>
+                        <td className="p-3 text-xs text-gray-400 max-w-xs truncate">
+                          {log.safeMetadata || '-'}
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-800 text-gray-300">
-                      {logs.map((log) => (
-                        <tr key={log.id} className="hover:bg-[#0e2444]/40">
-                          <td className="p-3 text-gray-400">
-                            {new Date(log.timestamp).toLocaleString('kn-IN')}
-                          </td>
-                          <td className="p-3 text-white font-bold">{log.adminUsername || 'system'}</td>
-                          <td className="p-3 text-[#fbbf24]">{log.action}</td>
-                          <td className="p-3 text-xs text-gray-400 max-w-xs truncate">
-                            {log.safeMetadata || '-'}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
@@ -1434,66 +1282,6 @@ export default function AdminDashboardPage() {
                 className="object-contain"
               />
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Full Payment Receipt Preview Modal */}
-      {previewReceiptUrl && (
-        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#0a192f] rounded-2xl border-2 border-[#fbbf24] p-5 max-w-lg w-full relative shadow-2xl space-y-4">
-            <button
-              onClick={() => {
-                setPreviewReceiptUrl(null);
-                setPreviewReceiptPlayerId(null);
-              }}
-              className="absolute top-3 right-3 p-1 rounded-full bg-gray-800 text-gray-300 hover:text-white"
-            >
-              <X className="w-6 h-6" />
-            </button>
-            <div className="text-center">
-              <h3 className="text-lg font-bold text-white">{previewReceiptPlayerName}</h3>
-              <p className="text-xs text-[#fbbf24] font-medium">ಶುಲ್ಕ ಪಾವತಿಯ ರಶೀದಿ / ಸ್ಕ್ರೀನ್‌ಶಾಟ್ (Payment Receipt)</p>
-            </div>
-            <div className="relative w-full h-96 rounded-xl overflow-hidden border border-gray-700 bg-black/40">
-              <Image
-                src={previewReceiptUrl}
-                alt={`Receipt for ${previewReceiptPlayerName}`}
-                fill
-                className="object-contain"
-              />
-            </div>
-            {previewReceiptPlayerId && (
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-800">
-                <div className="text-xs text-gray-400">ರಶೀದಿ ಪರಿಶೀಲಿಸಿ ಸ್ಥಿತಿ ಬದಲಾಯಿಸಿ:</div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => {
-                      if (previewReceiptPlayerId) {
-                        handleUpdatePayment(previewReceiptPlayerId, 'paid');
-                        setPreviewReceiptUrl(null);
-                        setPreviewReceiptPlayerId(null);
-                      }
-                    }}
-                    className="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md transition"
-                  >
-                    ✓ ದೃಢೀಕರಿಸಿ (Mark Paid)
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (previewReceiptPlayerId) {
-                        handleUpdatePayment(previewReceiptPlayerId, 'rejected');
-                        setPreviewReceiptUrl(null);
-                        setPreviewReceiptPlayerId(null);
-                      }
-                    }}
-                    className="px-3 py-1.5 rounded-lg text-xs font-bold bg-red-600 hover:bg-red-500 text-white shadow-md transition"
-                  >
-                    ✗ ತಿರಸ್ಕರಿಸಿ (Reject)
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}

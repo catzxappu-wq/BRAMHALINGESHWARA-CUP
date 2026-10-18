@@ -81,13 +81,13 @@ async function runTests() {
     const code2 = `SBK26-${String(seq2.lastNumber).padStart(6, '0')}`;
     assert(code2 !== code1, `Sequential code is strictly unique: ${code1} -> ${code2}`);
 
-    // TEST 5: Player Registration & Receipt Upload Lifecycle
-    console.log('\n--- Test Group 4: Player Registration & Receipt Upload Flow ---');
+    // TEST 5: Free Player Registration Lifecycle
+    console.log('\n--- Test Group 4: Free Player Registration Flow ---');
     const testMobile = '9876543210';
     // Clean any prior test player
     await prisma.player.deleteMany({ where: { mobileNumber: testMobile } });
 
-    // In the new receipt-based flow, the registration code is issued immediately upon form submission
+    // In the free registration flow, the registration code is issued immediately upon form submission
     const newSeq = await prisma.codeSequence.upsert({
       where: { id: 'player_code' },
       update: { lastNumber: { increment: 1 } },
@@ -103,39 +103,29 @@ async function runTests() {
         address: 'ಗೆಣಸಿನಕುಣಿ, ಅವಿನಹಳ್ಳಿ ಹೋಬಳಿ',
         playerCategory: 'all_rounder',
         photoStorageKey: 'data:image/jpeg;base64,mockphotodata',
-        paymentReceiptStorageKey: 'data:image/jpeg;base64,mockreceiptdata',
         guidanceBy: 'ಪ್ರಜ್ವಲ್ PK (ಕ್ಯಾಪ್ಟನ್)',
-        transactionReference: 'UPI1234567890',
-        paymentStatus: 'pending',
+        paymentStatus: 'free',
         selectionStatus: 'pending',
         registrationStatus: 'completed',
       },
     });
-    assert(testPlayer.id !== null, 'Player record created with receipt upload');
+    assert(testPlayer.id !== null, 'Player record created with free registration');
     assert(testPlayer.registrationCode === regCode, `Unique registration code assigned: ${regCode}`);
     assert(testPlayer.guidanceBy === 'ಪ್ರಜ್ವಲ್ PK (ಕ್ಯಾಪ್ಟನ್)', 'Guidance By field saved properly');
-    assert(testPlayer.paymentReceiptStorageKey !== null, 'Payment receipt screenshot saved properly');
-    assert(testPlayer.transactionReference === 'UPI1234567890', 'Transaction reference (UTR) saved');
-    assert(testPlayer.paymentStatus === 'pending', 'Player payment status initially pending review');
-
-    // Simulate Admin Verifying & Approving Payment Receipt
-    const paidPlayer = await prisma.player.update({
-      where: { id: testPlayer.id },
-      data: { paymentStatus: 'paid' },
-    });
-    assert(paidPlayer.paymentStatus === 'paid', 'Admin verified and marked payment receipt as paid');
+    assert(testPlayer.selectionStatus === 'pending', 'Player selection initially pending review');
+    assert(testPlayer.registrationStatus === 'completed', 'Registration marked completed');
 
     // TEST 6: Status check query
     console.log('\n--- Test Group 5: Status Check Query ---');
     const statusQuery = await prisma.player.findFirst({
       where: { registrationCode: regCode, mobileNumber: testMobile },
-      select: { fullName: true, playerCategory: true, paymentStatus: true, selectionStatus: true, guidanceBy: true },
+      select: { fullName: true, playerCategory: true, selectionStatus: true, guidanceBy: true },
     });
     assert(statusQuery !== null, 'Status check query succeeds with code and mobile');
     assert(statusQuery.fullName === 'ಮಹೇಶ್ ಕುಮಾರ್', 'Player name verified');
     assert(statusQuery.playerCategory === 'all_rounder', 'Player category verified');
     assert(statusQuery.guidanceBy === 'ಪ್ರಜ್ವಲ್ PK (ಕ್ಯಾಪ್ಟನ್)', 'Guidance By verified');
-    assert(statusQuery.paymentStatus === 'paid', 'Payment status is verified paid');
+    assert(statusQuery.selectionStatus === 'pending', 'Selection status is pending');
 
     // TEST 7: Selection Status Update
     console.log('\n--- Test Group 6: Admin Selection Update ---');
