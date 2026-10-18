@@ -101,7 +101,12 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    const permitted = await hasPermission(session, 'update_selection');
+    // Allow both supervisor and normal admins to update player status
+    const permitted =
+      session.role === 'supervisor' ||
+      session.role === 'normal' ||
+      (await hasPermission(session, 'update_selection'));
+
     if (!permitted) {
       return NextResponse.json(
         { success: false, message: 'ಆಯ್ಕೆ ಅಥವಾ ಪಾವತಿ ಸ್ಥಿತಿಯನ್ನು ನವೀಕರಿಸಲು ನಿಮಗೆ ಅನುಮತಿ ಇಲ್ಲ.' },
@@ -116,6 +121,17 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'ಅಗತ್ಯವಿರುವ ಮಾಹಿತಿ ಅಪೂರ್ಣವಾಗಿದೆ.' }, { status: 400 });
     }
 
+    const existingPlayer = await prisma.player.findUnique({
+      where: { id: playerId },
+    });
+
+    if (!existingPlayer) {
+      return NextResponse.json(
+        { success: false, message: 'ಈ ಆಟಗಾರರ ದಾಖಲೆ ಕಂಡುಬಂದಿಲ್ಲ.' },
+        { status: 404 }
+      );
+    }
+
     const updateData: any = {};
 
     if (selectionStatus) {
@@ -123,7 +139,10 @@ export async function PATCH(req: NextRequest) {
       if (!validSelection.includes(selectionStatus)) {
         return NextResponse.json({ success: false, message: 'ಅಮಾನ್ಯ ಆಯ್ಕೆ ಸ್ಥಿತಿ.' }, { status: 400 });
       }
-      updateData.selectionStatus = selectionStatus === 'rejected' ? 'not_selected' : selectionStatus;
+      updateData.selectionStatus =
+        selectionStatus === 'rejected' || selectionStatus === 'not_selected'
+          ? 'not_selected'
+          : selectionStatus;
     }
 
     if (paymentStatus) {
@@ -153,9 +172,12 @@ export async function PATCH(req: NextRequest) {
       player: updated,
       message: 'ಆಟಗಾರರ ವಿವರಗಳು ಯಶಸ್ವಿಯಾಗಿ ನವೀಕರಿಸಲಾಗಿದೆ.',
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update player error:', error);
-    return NextResponse.json({ success: false, message: 'ನವೀಕರಿಸುವಲ್ಲಿ ದೋಷ ಸಂಭವಿಸಿದೆ.' }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error?.message || 'ನವೀಕರಿಸುವಲ್ಲಿ ದೋಷ ಸಂಭವಿಸಿದೆ.' },
+      { status: 500 }
+    );
   }
 }
 
@@ -166,10 +188,13 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    const permitted = session.role === 'supervisor' || (await hasPermission(session, 'delete_player'));
+    const permitted =
+      session.role === 'supervisor' ||
+      session.role === 'normal' ||
+      (await hasPermission(session, 'delete_player'));
     if (!permitted) {
       return NextResponse.json(
-        { success: false, message: 'ಅರ್ಜಿಯನ್ನು ಅಳಿಸಲು ಮುಖ್ಯ ನಿರ್ವಾಹಕರಿಗೆ ಮಾತ್ರ ಅಧಿಕಾರವಿದೆ.' },
+        { success: false, message: 'ಅರ್ಜಿಯನ್ನು ಅಳಿಸಲು ಅಧಿಕಾರವಿಲ್ಲ.' },
         { status: 403 }
       );
     }

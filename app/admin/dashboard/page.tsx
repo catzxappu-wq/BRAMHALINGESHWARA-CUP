@@ -236,8 +236,8 @@ export default function AdminDashboardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ playerId, selectionStatus: status }),
       });
-      const data = await res.json();
-      if (data.success) {
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.success) {
         const msg =
           status === 'approved'
             ? 'ಆಟಗಾರನನ್ನು ಆಯ್ಕೆ ಮಾಡಲಾಗಿದೆ (Approved).'
@@ -248,10 +248,11 @@ export default function AdminDashboardPage() {
         loadPlayers();
         loadStats();
       } else {
-        showFeedback('error', data.message || 'ನವೀಕರಣ ವಿಫಲವಾಗಿದೆ.');
+        const errMsg = data?.message || `ದೋಷ (${res.status}): ನವೀಕರಣ ವಿಫಲವಾಗಿದೆ.`;
+        showFeedback('error', errMsg);
       }
-    } catch {
-      showFeedback('error', 'ಸರ್ವರ್ ದೋಷ.');
+    } catch (err: any) {
+      showFeedback('error', err?.message || 'ಸರ್ವರ್ ಸಂಪರ್ಕದಲ್ಲಿ ದೋಷ.');
     }
   };
 
@@ -264,16 +265,17 @@ export default function AdminDashboardPage() {
       const res = await fetch(`/api/admin/players?id=${playerId}`, {
         method: 'DELETE',
       });
-      const data = await res.json();
-      if (data.success) {
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.success) {
         showFeedback('success', data.message || 'ಆಟಗಾರರ ಅರ್ಜಿಯನ್ನು ಶಾಶ್ವತವಾಗಿ ಅಳಿಸಲಾಗಿದೆ.');
         loadPlayers();
         loadStats();
       } else {
-        showFeedback('error', data.message || 'ಅಳಿಸುವಲ್ಲಿ ದೋಷ ಉಂಟಾಗಿದೆ.');
+        const errMsg = data?.message || `ಅಳಿಸುವಲ್ಲಿ ದೋಷ (${res.status}).`;
+        showFeedback('error', errMsg);
       }
-    } catch {
-      showFeedback('error', 'ಸರ್ವರ್ ದೋಷ.');
+    } catch (err: any) {
+      showFeedback('error', err?.message || 'ಸರ್ವರ್ ಸಂಪರ್ಕದಲ್ಲಿ ದೋಷ.');
     }
   };
 
@@ -870,6 +872,7 @@ export default function AdminDashboardPage() {
                             <td className="p-3 text-center">
                               <div className="flex items-center justify-center gap-1.5">
                                 <button
+                                  type="button"
                                   onClick={() => handleUpdateSelection(p.id, 'approved')}
                                   title="ಆಯ್ಕೆ ಮಾಡಿ (Approve)"
                                   className={`p-1.5 rounded-lg border text-xs font-bold transition-all ${
@@ -881,6 +884,7 @@ export default function AdminDashboardPage() {
                                   <UserCheck className="w-4 h-4" />
                                 </button>
                                 <button
+                                  type="button"
                                   onClick={() => handleUpdateSelection(p.id, 'not_selected')}
                                   title="ತಿರಸ್ಕರಿಸಿ (Reject)"
                                   className={`p-1.5 rounded-lg border text-xs font-bold transition-all ${
@@ -892,6 +896,7 @@ export default function AdminDashboardPage() {
                                   <Ban className="w-4 h-4" />
                                 </button>
                                 <button
+                                  type="button"
                                   onClick={() => handleUpdateSelection(p.id, 'pending')}
                                   title="ಪರಿಶೀಲನೆಯಲ್ಲಿದೆ (Pending)"
                                   className={`p-1.5 rounded-lg border text-xs font-bold transition-all ${
@@ -903,6 +908,7 @@ export default function AdminDashboardPage() {
                                   <Clock className="w-4 h-4" />
                                 </button>
                                 <button
+                                  type="button"
                                   onClick={() => handleDeletePlayer(p.id, p.fullName, p.registrationCode)}
                                   title="ಶಾಶ್ವತವಾಗಿ ಅಳಿಸಿ (Delete Player)"
                                   className="p-1.5 rounded-lg border border-red-800/80 bg-red-950/70 text-red-400 hover:bg-red-600 hover:text-white hover:border-red-500 transition-all shadow-sm"
