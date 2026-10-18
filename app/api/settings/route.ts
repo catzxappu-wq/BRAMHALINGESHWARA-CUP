@@ -47,6 +47,10 @@ export async function GET() {
         reasonKannada: capacity.reasonKannada,
         isPaymentGatewayConfigured: isRazorpayConfigured(),
       },
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, max-age=0, must-revalidate',
+      },
     });
   } catch (error) {
     console.error('Error fetching settings:', error);

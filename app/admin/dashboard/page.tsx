@@ -305,6 +305,7 @@ export default function AdminDashboardPage() {
       const data = await res.json();
       if (data.success) {
         showFeedback('success', 'ಸೆಟ್ಟಿಂಗ್ಸ್ ಯಶಸ್ವಿಯಾಗಿ ಉಳಿಸಲಾಗಿದೆ!');
+        loadSettings();
         loadStats();
       } else {
         showFeedback('error', data.message || 'ಉಳಿಸುವಲ್ಲಿ ದೋಷ.');
